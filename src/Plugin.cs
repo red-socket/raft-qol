@@ -23,8 +23,6 @@ public class Plugin : BaseUnityPlugin
         Log.LogInfo($"{Name} {Version} loaded");
     }
 
-    private void OnDestroy()
-    {
-        harmony?.UnpatchSelf();
-    }
+    // BepInEx's manager object (and this component) is destroyed when the startup scene unloads,
+    // before the main menu. Don't unpatch in OnDestroy, or every patch is gone for the session.
 }
