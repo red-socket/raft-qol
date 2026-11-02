@@ -1,0 +1,14 @@
+# Local only: workspace instructions, internal planning and research. Never commit these.
+CLAUDE.md
+.claude/
+/notes/
+PHASE1_TASKS.md
+QOL_FEATURE_RESEARCH.md
+research-data/
+
+# Build output and large intermediates
+bin/
+obj/
+*.user
+*.blend
+*.blend1

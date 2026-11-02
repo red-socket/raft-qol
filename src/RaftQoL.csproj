@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Raft QoL: BepInEx 5 plugin. Build settings follow docs/modding/loader-options.md §6.
+    `dotnet build` compiles against the live game install and copies the DLL into
+    <Raft>/BepInEx/plugins/RaftQoL/ when BepInEx is installed.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>RaftQoL</AssemblyName>
+    <RootNamespace>RaftQoL</RootNamespace>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <DebugType>portable</DebugType>
+    <!-- Defaults to the workspace symlink reference/game (into the Steam install). Override with -p:RaftGame=/path/to/Raft. -->
+    <RaftGame Condition="'$(RaftGame)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../reference/game'))</RaftGame>
+    <RaftManaged>$(RaftGame)/Raft_Data/Managed</RaftManaged>
+    <BepInExCore>$(RaftGame)/BepInEx/core</BepInExCore>
+    <PluginDir>$(RaftGame)/BepInEx/plugins/RaftQoL</PluginDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <!-- Compile against Assembly-CSharp with private members made public (no runtime effect). -->
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- BepInEx + HarmonyX (from the install in the game folder) -->
+  <ItemGroup>
+    <Reference Include="$(BepInExCore)/BepInEx.dll" Private="false" />
+    <Reference Include="$(BepInExCore)/0Harmony.dll" Private="false" />
+  </ItemGroup>
+
+  <!-- Game assemblies -->
+  <ItemGroup>
+    <Reference Include="$(RaftManaged)/Assembly-CSharp.dll" Private="false" Publicize="true" />
+    <Reference Include="$(RaftManaged)/UnityEngine.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/UnityEngine.*Module.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/Unity.TextMeshPro.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/Unity.InputSystem.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/Unity.Netcode.Runtime.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/Unity.Collections.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/com.rlabrecque.steamworks.net.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/Newtonsoft.Json.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/FMODUnity.dll" Private="false" />
+  </ItemGroup>
+
+  <Target Name="CheckBepInEx" BeforeTargets="ResolveAssemblyReferences" Condition="!Exists('$(BepInExCore)/BepInEx.dll')">
+    <Error Text="BepInEx not found at $(BepInExCore). Install it per docs/modding/loader-options.md §4." />
+  </Target>
+
+  <Target Name="CopyToPlugins" AfterTargets="Build">
+    <MakeDir Directories="$(PluginDir)" />
+    <Copy SourceFiles="$(TargetPath);$(TargetDir)$(TargetName).pdb" DestinationFolder="$(PluginDir)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="RaftQoL -> $(PluginDir)" />
+  </Target>
+</Project>
