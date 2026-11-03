@@ -4,7 +4,7 @@
 
 A fan-made quality-of-life mod for [Raft](https://store.steampowered.com/app/648800/Raft/). It makes everyday survival less tedious and leaves the game's balance and feel alone. Every feature can be switched on or off.
 
-> **Status: early development.** Nothing is released yet. The features below work in single-player and when you host; tests with other players are still to come.
+> **Status: 0.1.0 beta.** Tested in single-player and when hosting. Playing together with other players has not been tested yet; see [Known limitations](#known-limitations).
 
 ## Requirements
 - Raft 1.1 (Steam). Developed against build 22312909. A game update can break the mod until it is patched.
@@ -45,6 +45,12 @@ A fan-made quality-of-life mod for [Raft](https://store.steampowered.com/app/648
 | Stacking sails, stronger engines | Extra open sails add speed; engines can move more foundations | Relaxed | | Host |
 
 Every key can be changed in the QoL tab. Keys do nothing while a menu or the chat is open.
+
+## Known limitations
+- **Multiplayer is untested.** The mod only sends the game's own network messages, so players without it should be able to join, but nobody has tried it yet. Features marked "Host" do nothing when you join someone else's world.
+- **Gamepad** controls and the Chinese, Japanese, Korean and Russian fonts in the QoL tab have not been tested.
+- Settings and labels are in English only.
+- Removing the mod leaves your worlds loadable in the unmodded game: the mod adds nothing to save files.
 
 ## Multiplayer
 Each feature runs either for you only, or on the host for everyone, and only uses the game's own network messages, so players without the mod (including console players) can join a modded host, and you can join an unmodded host. The table above says which features need you to be the host.
