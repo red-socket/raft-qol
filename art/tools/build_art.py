@@ -7,6 +7,7 @@ and the key-art render from keyart_scene.py (renders/keyart-raft-porch-1920x1080
 
 Outputs go to raft-qol/art/{logo,icon,banner,feature-icons}/.
   python3 -I raft-qol/art/tools/build_art.py header   # only banner/header-1300x372.png
+  python3 -I raft-qol/art/tools/build_art.py features <shots dir>   # only features/*.jpg, from in-game shots
 Visual language: the game's inventory UI (item icons on ItemBG slots) and the green
 notebook tape, so it reads as a sibling of the-fourth-chapter's art without copying it.
 """
@@ -197,6 +198,82 @@ def header(keyart, logo_png, out, W=1300, H=372):
     return out
 
 
+# One 1920x1080 card per feature: (output slug, shot file in the shots dir, title, caption, item icon[, crop]).
+# crop = (x, y, w, h) as fractions of the shot, to zoom in on small UI.
+# The shots are 16:9 in-game screenshots taken with the debug command rig (src/Dev/DevRig.cs).
+CARDS = [
+    ("01-craft-from-chests", "01-craft-chests.png", "Craft from nearby chests", "Crafting counts and uses what is in your chests", "Item_StorageLarge", (0.0, 0.0, 0.62, 0.62)),
+    ("02-build-from-chests", "04-build-chests.png", "Build from nearby chests", "Build, repair and reinforce straight from your chests", "Item_Hammer", (0.22, 0.22, 0.56, 0.56)),
+    ("03-quick-deposit", "05-quick-deposit.png", "Quick deposit", "One key puts your materials into the chests that hold them", "Item_Storage_Tiny", (0.42, 0.0, 0.58, 0.58)),
+    ("04-bulk-craft", "02-bulk-craft.png", "Bulk craft", "Shift-click makes five, Ctrl-click makes all you can", "Item_Rope", (0.38, 0.12, 0.62, 0.62)),
+    ("05-hold-to-fill", "06-grill.png", "Hold to fill", "Hold E to keep feeding grills, smelters, purifiers and tanks", "Item_GrillSmall", (0.18, 0.14, 0.64, 0.64)),
+    ("06-return-containers", "07-return-containers.png", "Return containers", "Bowls and glasses come back after you eat and drink", "Item_ClayBowl", (0.38, 0.14, 0.62, 0.62)),
+    ("07-raft-controls", "08-raft-controls.png", "Raft controls", "Engines, anchors and sails from anywhere on the raft", "Item_MotorWheel"),
+    ("08-wheel-recenter", "09-wheel-turned.png", "Steering wheel recenter", "Let go and the wheel straightens itself", "Item_SteeringWheel"),
+    ("09-look-at-info", "06-grill.png", "Look-at info", "Fuel, charge, cooking time and chest space at a glance", "Item_Battery", (0.30, 0.28, 0.40, 0.40)),
+    ("10-item-details", "03-item-details.png", "Item details", "Food, water, durability and cooking results on every item", "Icon_Potato", (0.30, 0.04, 0.46, 0.46)),
+    ("11-compass", "11b-compass.png", "Compass and raft marker", "Your heading, and the way back to your raft", "Item_Compass", (0.12, 0.0, 0.76, 0.76)),
+    ("12-full-refund", "12-full-refund.png", "Full refund", "Removing a block gives back everything it cost", "Item_Plank", (0.42, 0.06, 0.58, 0.58)),
+    ("13-stacking-sails", "13-sails.png", "Stacking sails", "Every extra sail adds speed, and engines pull bigger rafts", "Item_Sail"),
+    ("14-smarter-inventory", "14-smart-inventory.png", "Smarter inventory", "Materials go to your backpack, and your hand refills itself", "Item_Backpack", (0.0, 0.0, 0.66, 0.66)),
+    ("15-keep-inventory", "15g-settings.png", "Keep inventory on death", "Keep everything, or just your hotbar and gear", "Item_AnchorBig", (0.165, 0.70, 0.49, 0.24)),
+    ("16-faster-hook", "15b-settings.png", "Faster hook", "Reel debris in twice as fast, or grab it instantly", "ItemPlasticHook", (0.165, 0.685, 0.49, 0.24)),
+    ("17-settings", "15-settings-top.png", "In Raft's own settings", "Every feature on or off, with Vanilla+ and Relaxed presets", "Item_Hammer", (0.15, 0.39, 0.52, 0.56)),
+]
+
+
+def feature_card(shot, title, caption, icon_name, logo_png, out, crop=None):
+    """Header band (item slot, green tape title, handwritten caption, logo) over a blurred copy of the shot, and the
+    shot itself as a framed inset. `crop` = (x, y, w, h) as fractions of the shot zooms in on the part that matters."""
+    W, H = 1920, 1080
+    src = TMP / "card_src.png"
+    if crop:
+        sw, sh = size_of(shot)
+        x, y, w, h = crop
+        mg(shot, "-crop", f"{int(w * sw)}x{int(h * sh)}+{int(x * sw)}+{int(y * sh)}", "+repage", src)
+    else:
+        mg(shot, src)
+    bg = TMP / "card_bg.png"
+    mg(src, "-resize", f"{W // 8}x{H // 8}^", "-gravity", "center", "-extent", f"{W // 8}x{H // 8}",
+       "-blur", "0x3", "-resize", f"{W}x{H}!", "-fill", "#0d1c24", "-colorize", "55", bg)
+    # Inset: 16:9 (or the crop's aspect) under the header band, with a light frame and a shadow.
+    top, margin_b = 236, 40
+    ih = H - top - margin_b
+    inset = TMP / "card_inset.png"
+    mg(src, "-filter", "Lanczos", "-resize", f"x{ih}", "-resize", f"{W - 160}x{ih}>", "-bordercolor", "#e8d9b5", "-border", "5", inset)
+    inset_s = shadowed(inset, TMP / "card_inset_s.png", "70x14+0+8")
+    ic = slot_icon(icon_name, TMP / "card_icon.png", highlighted=True, scale=0.78)
+    tw = max(520, 38 * len(title) + 110)
+    tp = tape_label(title.upper(), TMP / "card_tape.png", tw, 118, text_h_frac=0.5, tilt=-1.5)
+    head = shadowed(hrow([ic, tp], TMP / "card_head.png", 4), TMP / "card_head_s.png", "65x8+0+5")
+    cap = shadowed(hand(caption, TMP / "card_cap.png", 46), TMP / "card_cap_s.png", "85x5+0+3")
+    lg = TMP / "card_logo.png"
+    mg(logo_png, "-resize", "230x", lg)
+    lgs = shadowed(lg, TMP / "card_logo_s.png", "55x8+0+5")
+    _, hh = size_of(head)
+    _, ish = size_of(inset_s)
+    inset_y = top - 10 + max(0, (H - top - margin_b - ish) // 2)
+    mg(bg, inset_s, "-gravity", "north", "-geometry", f"+0+{inset_y}", "-composite",
+       head, "-gravity", "northwest", "-geometry", "+52+18", "-composite",
+       cap, "-gravity", "northwest", "-geometry", f"+{52 + 150}+{18 + hh - 6}", "-composite",
+       lgs, "-gravity", "northeast", "-geometry", "+48+14", "-composite",
+       "-quality", "92", out)
+    return out
+
+
+def feature_cards(shots):
+    d = ART / "features"
+    d.mkdir(parents=True, exist_ok=True)
+    logo_png = ART / "logo/raft-qol-logo-white.png"
+    for slug, shot, title, caption, icon_name, *crop in CARDS:
+        src = Path(shots) / shot
+        if not src.exists():
+            print("missing shot", src)
+            continue
+        feature_card(src, title, caption, icon_name, logo_png, d / f"{slug}.jpg", crop[0] if crop else None)
+        print("built", d / f"{slug}.jpg")
+
+
 def icon(out, size=256):
     """Square mod icon: splash blue, a 2x2 inventory of headline items, green QoL tape."""
     bg = TMP / "icon_bg.png"
@@ -225,6 +302,9 @@ def feature_icons():
 
 def main():
     import sys
+    if sys.argv[1:2] == ["features"]:
+        feature_cards(sys.argv[2])
+        return
     if sys.argv[1:] == ["header"]:
         header(ART / "renders/keyart-raft-porch-1920x1080.png", ART / "logo/raft-qol-logo-white.png",
                ART / "banner/header-1300x372.png")
