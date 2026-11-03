@@ -37,7 +37,8 @@ A fan-made quality-of-life mod for [Raft](https://store.steampowered.com/app/648
 | Steering wheel recenter | A released wheel turns back to straight; lock it with a key | Vanilla+ | U | Host |
 | Look-at info | Tank levels, battery charge, fuel, cooking time left and chest fill under the crosshair | Vanilla+ | | Anyone |
 | Item details | Food, water, durability and cooking result in item descriptions | Vanilla+ | | Anyone |
-| Compass and raft marker | Your heading, and distance and direction to the raft when you are away from it | Vanilla+ | | Anyone |
+| Compass and raft marker | Your heading, the distance and direction to the raft when you are away from it, and to the island your receiver is tuned to | Vanilla+ | | Anyone |
+| Smarter inventory | Picked-up materials go to the backpack before the hotbar; the item in your hand is refilled when it runs out or breaks (from nearby chests too when you host) | Relaxed | | Anyone |
 | Keep inventory on death | Keep everything, or keep the hotbar and equipment | Relaxed | | Anyone |
 | Full refund | Removing built blocks gives back all materials (adjustable), foundation armor included | Relaxed | | Anyone |
 | Faster hook | The hook reels in and grabs debris twice as fast (adjustable) | Relaxed | | Anyone |
