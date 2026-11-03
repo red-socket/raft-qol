@@ -22,7 +22,7 @@ public sealed class LookAtInfo : Feature
 
     protected override void BindSettings()
     {
-        label = new HudText(Config, Section, "Info line", 0.5f, 0.42f, 20);
+        label = new HudText(Config, Section, "Info line", 0.5f, 0.465f, 20); // between the crosshair and the build-cost boxes the hammer shows (about 0.39-0.45)
     }
 
     protected override void OnEnable() => label.Attach();
