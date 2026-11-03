@@ -70,6 +70,7 @@ internal class Runtime : MonoBehaviour
             catch (Exception e) { feature.Fault(e, "updating"); }
         }
 
+        Ui.Hud.Update();
     }
 
     // Edits to raft-qol.cfg made while the game runs (by hand or by another tool) apply live.
