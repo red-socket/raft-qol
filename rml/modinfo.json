@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "license": "GPL-3.0",
   "slug": "raft-qol",
+  "updateUrl": "https://www.raftmodding.com/api/v1/mods/raft-qol/version.txt",
   "requiredByAllPlayers": false,
   "isModPermanent": false,
   "icon": "icon.png",

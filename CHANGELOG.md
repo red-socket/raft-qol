@@ -3,7 +3,7 @@
 ## 0.1.0 for Raft Mod Loader, 2026-11-03
 
 ### Added
-- **Raft Mod Loader (RML) version:** `RaftQoL-<version>.rmod`, with the same features, settings and QoL tab as the BepInEx version. Settings are stored in `mods/ModData/raft-qol/raft-qol.cfg`. The `.rmod` contains the mod's source files, which RML compiles when it loads the mod. The mod can be unloaded and loaded again from RML's mod manager while the game runs; unloading removes its patches, the QoL tab, the HUD and its notifications.
+- **Raft Mod Loader (RML) version:** `RaftQoL-<version>.rmod`, with the same features, settings and QoL tab as the BepInEx version. Settings are stored in `mods/ModData/raft-qol/raft-qol.cfg`. The `.rmod` contains the mod's source files, which RML compiles when it loads the mod. The mod can be unloaded and loaded again from RML's mod manager while the game runs; unloading removes its patches, the QoL tab, the HUD and its notifications. The mod manager and update mods can check RaftModding for newer versions.
 
 ## 0.1.0 (beta), 2026-11-03
 
