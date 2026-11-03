@@ -66,4 +66,25 @@ public sealed class BulkCraft : Feature
             if (extra > 0) Repeat(__instance, extra);
         }
     }
+
+    // Ctrl is also Raft's default crouch key, and movement keeps running while the inventory is open, so a
+    // Ctrl-click would crouch the player. While the inventory (crafting) menu is open, the Crouch binding reads as
+    // released.
+    [HarmonyPatch(typeof(CustomInputConfig), nameof(CustomInputConfig.IsPressed), typeof(UnityEngine.InputSystem.InputAction), typeof(string))]
+    private static class NoCrouchHeld
+    {
+        private static void Postfix(string key, ref bool __result)
+        {
+            if (__result && key == "Crouch" && CanvasHelper.ActiveMenu == MenuType.Inventory) __result = false;
+        }
+    }
+
+    [HarmonyPatch(typeof(CustomInputConfig), nameof(CustomInputConfig.WasPressedThisFrame), typeof(UnityEngine.InputSystem.InputAction), typeof(string))]
+    private static class NoCrouchPressed
+    {
+        private static void Postfix(string key, ref bool __result)
+        {
+            if (__result && key == "Crouch" && CanvasHelper.ActiveMenu == MenuType.Inventory) __result = false;
+        }
+    }
 }
