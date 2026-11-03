@@ -181,6 +181,23 @@ internal static class DevRig
                 Reply($"settings open={s.IsOpen} tab={s.tabGroup.SelectedTabButton?.tabIndex} buttons={s.tabGroup.tabButtons?.Length}");
                 break;
             }
+            case "row":
+            {
+                // row <row GameObject name, '_' for spaces> <value>: sets a QoL tab widget as a click would.
+                var s = ComponentManager<Settings>.Value;
+                var panel = s.optionsCanvas.GetComponentsInChildren<Transform>(true).First(t => t.name == "RaftQoL");
+                string name = args[1].Replace('_', ' ');
+                var row = panel.GetComponentsInChildren<Transform>(true).First(t => t.name == name);
+                var toggle = row.GetComponentInChildren<UnityEngine.UI.Toggle>(true);
+                var slider = row.GetComponentInChildren<UnityEngine.UI.Slider>(true);
+                var dropdown = row.GetComponentInChildren<UnityEngine.UI.Dropdown>(true);
+                // Dropdown first: its item template contains a Toggle.
+                if (dropdown != null) dropdown.value = int.Parse(args[2]);
+                else if (slider != null) slider.value = float.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture);
+                else if (toggle != null) toggle.isOn = bool.Parse(args[2]);
+                Reply($"{name} set to {args[2]}");
+                break;
+            }
             case "hud":
                 ComponentManager<CanvasHelper>.Value.SetUIState(args.Length < 2 || args[1] == "on");
                 Reply($"HUD visible={Game.HudVisible}");
