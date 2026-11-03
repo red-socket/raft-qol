@@ -58,5 +58,8 @@ dotnet build src -p:RaftGame="/path/to/steamapps/common/Raft"
 
 The build references the game's own assemblies and copies `RaftQoL.dll` into `<Raft>/BepInEx/plugins/RaftQoL/`.
 
+## License
+The source code is licensed under the [GNU General Public License v3.0](LICENSE). The images in `art/` are built from Raft's own game assets, which belong to Redbeet Interactive, so they are not covered by the GPL.
+
 ## Disclaimer
 This is an unofficial fan project, and it is not affiliated with or endorsed by Redbeet Interactive. Raft and its logo, fonts, textures and models belong to Redbeet Interactive. The artwork in `art/` is built from game assets for this mod's own pages and in-game use.
