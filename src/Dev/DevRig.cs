@@ -235,6 +235,55 @@ internal static class DevRig
                 Reply($"placed {item.UniqueName} at {block.transform.position} storages={StorageManager.allStorages.Count}");
                 break;
             }
+            case "expand":
+            {
+                // expand <r>: fills a (2r+1)² grid of foundations around the raft's first foundation (aligned to it)
+                RequireTestWorld();
+                var origin = FirstFoundation().transform.localPosition;
+                int r = int.Parse(args[1]);
+                var item = ItemManager.GetItemByName("Block_Foundation");
+                var taken = new HashSet<Vector2Int>(ComponentManager<RaftBounds>.Value.walkableBlocks.Where(b => b != null)
+                    .Select(b => Grid(b.transform.localPosition - origin)));
+                int added = 0;
+                for (int gx = -r; gx <= r; gx++)
+                    for (int gz = -r; gz <= r; gz++)
+                    {
+                        if (taken.Contains(new Vector2Int(gx, gz))) continue;
+                        PlaceBlock(item, origin + new Vector3(gx * 1.5f, 0f, gz * 1.5f), DPS.Default);
+                        added++;
+                    }
+                Reply($"added {added} foundations");
+                break;
+            }
+            case "placeat":
+            case "chestat":
+            {
+                // placeat <item> <gx> <gz> | chestat <gx> <gz>: on the foundation at grid cell (gx, gz), floor height
+                RequireTestWorld();
+                bool chest = args[0] == "chestat";
+                var item = ItemManager.GetItemByName(chest ? "Placeable_Storage_Small" : args[1]);
+                int at = chest ? 1 : 2;
+                var origin = FirstFoundation().transform.localPosition;
+                var pivot = SingletonGeneric<GameManager>.Singleton.lockedPivot;
+                var position = new Vector3(origin.x + float.Parse(args[at]) * 1.5f, origin.y, origin.z + float.Parse(args[at + 1]) * 1.5f);
+                // Floor height: the top of the foundation under the cell (the player's height floats things).
+                var above = pivot.TransformPoint(position) + Vector3.up * 3f;
+                if (Physics.Raycast(above, Vector3.down, out var hit, 6f, LayerMasks.MASK_Block))
+                    position.y = pivot.InverseTransformPoint(hit.point).y;
+                var block = PlaceBlock(item, position, DPS.Floor);
+                lastBlock = block;
+                if (chest) lastChest = block as Storage_Small;
+                Reply($"placed {item.UniqueName} at cell {args[at]},{args[at + 1]}");
+                break;
+            }
+            case "home":
+            {
+                // Puts the player on the raft's first foundation.
+                var first = FirstFoundation();
+                Game.LocalPlayer.transform.position = first.transform.position + Vector3.up * 1.5f;
+                Reply("player on the raft");
+                break;
+            }
             case "canbuild":
             {
                 var item = ItemManager.GetItemByName(args[1]);
@@ -437,6 +486,24 @@ internal static class DevRig
         return $"engines on={engines.Count(m => m.engineSwitchOn)}/{engines.Count} reversed={engines.Count(m => m.rotatesForward == false)} " +
                $"sails open={Sail.AllSails.Count(x => x != null && x.open)}/{Sail.AllSails.Count} " +
                $"anchors down={anchors.Count(a => a.AtBottom)}/{anchors.Count} dropping={anchors.Count(a => a.DroppingAnchor)} raft anchored={ComponentManager<Raft>.Value.IsAnchored}";
+    }
+
+    private static Block FirstFoundation() =>
+        ComponentManager<RaftBounds>.Value.walkableBlocks.Where(b => b != null).OrderBy(b => b.ObjectIndex).First();
+
+    private static Vector2Int Grid(Vector3 offset) => new Vector2Int(Mathf.RoundToInt(offset.x / 1.5f), Mathf.RoundToInt(offset.z / 1.5f));
+
+    // The host's own placement (BlockCreator.cs:412-414), without the build-cursor checks.
+    private static Block PlaceBlock(Item_Base item, Vector3 localPosition, DPS dps)
+    {
+        var creator = Game.LocalPlayer.BlockCreator;
+        var block = creator.CreateBlock(item, localPosition, Vector3.zero, dps, -1, replicating: false,
+            SaveAndLoad.GetUniqueObjectIndex(), SaveAndLoad.GetUniqueObjectIndex(), NetworkUpdateManager.GetUniqueBehaviourIndex());
+        Game.LocalPlayer.Network.RPC(new Message_BlockCreator_PlaceBlock(Messages.BlockCreator_PlaceBlock, creator, item.UniqueIndex, block.ObjectIndex,
+            block.networkedBehaviour != null ? block.networkedBehaviour.ObjectIndex : 0u, block.networkedBehaviour != null ? block.networkedBehaviour.BehaviourIndex : 0u,
+            block.transform.localPosition, block.transform.localEulerAngles, -1, dps),
+            Target.Other, Steamworks.EP2PSend.k_EP2PSendReliable, NetworkChannel.Channel_Game);
+        return block;
     }
 
     private static bool IsTestWorld() => SaveAndLoad.CurrentGameFileName?.StartsWith(TestPrefix) == true;
