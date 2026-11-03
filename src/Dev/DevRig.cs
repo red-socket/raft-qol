@@ -249,6 +249,78 @@ internal static class DevRig
                 Reply($"reinforce {lastBlock?.name}: {hammer.ReinforceBlock(lastBlock)}");
                 break;
             }
+            case "axe":
+            {
+                // Removes the last placed block as the local player's axe does (Axe.DestroyBlock refunds, then removes).
+                var axe = Game.LocalPlayer.GetComponentInChildren<Axe>(true);
+                Reply($"axed {lastBlock?.name}: {axe.DestroyBlock(lastBlock, updateRaftBounds: true)}");
+                break;
+            }
+            case "bulk":
+            {
+                // bulk <n>: n more crafts of the selected recipe, as a held Shift/Ctrl would add.
+                int made = Features.Crafting.BulkCraft.Repeat(ComponentManager<CraftingMenu>.Value, int.Parse(args[1]));
+                Reply($"bulk crafted {made}");
+                break;
+            }
+            case "eat":
+            {
+                // eat <item>: Stats.Consume (as ConsumeComponent.OnUse on the host) plus the slot's use, as when eating.
+                var player = Game.LocalPlayer;
+                var slot = player.Inventory.allSlots.First(x => !x.IsEmpty && x.itemInstance.UniqueName == args[1]);
+                var item = slot.itemInstance.baseItem;
+                player.Stats.Consume(item);
+                slot.IncrementUses(-1);
+                Reply($"ate {args[1]}");
+                break;
+            }
+            case "hooks":
+                foreach (var hook in Game.LocalPlayer.GetComponentsInChildren<Hook>(true))
+                    Reply($"hook {hook.name}: pullSpeed={hook.pullSpeed} gatherTime={hook.gatherTime}");
+                break;
+            case "engines": Features.Raft.RaftControls.ToggleEngines(); Reply(RaftState()); break;
+            case "reverse": Features.Raft.RaftControls.ReverseEngines(); Reply(RaftState()); break;
+            case "anchors": Features.Raft.RaftControls.ToggleAnchors(); Reply(RaftState()); break;
+            case "sails": Features.Raft.RaftControls.ToggleSails(); Reply(RaftState()); break;
+            case "raft": Reply(RaftState()); break;
+            case "velocity":
+            {
+                var raft = ComponentManager<global::Raft>.Value;
+                Reply($"raft speed={raft.body.velocity.magnitude:F3} wind={raft.speed:F2} motorStrength={RaftVelocityManager.motorStrength}+{RaftVelocityManager.extraMotorStrength} weight={RaftWeightManager.FoundationWeight} state={RaftVelocityManager.MotorWheelWeightStrength}");
+                break;
+            }
+            case "wheel":
+            {
+                // wheel [degrees]: turn every placed wheel (host Rotate, as a player turning it), then report angles
+                var wheels = UnityEngine.Object.FindObjectsOfType<SteeringWheel>();
+                if (args.Length > 1) foreach (var w in wheels) w.Rotate(float.Parse(args[1]));
+                Reply("wheels: " + string.Join(", ", wheels.Select(w => w.targetLocalEulerZ.ToString("F1"))));
+                break;
+            }
+            case "lookinfo":
+            {
+                // Points the camera at the last placed block for this frame and reads the look-at line.
+                var target = lastBlock.transform.position + Vector3.up * float.Parse(args.Length > 1 ? args[1] : "0.5");
+                Camera.main.transform.LookAt(target);
+                Reply($"look-at: '{Features.Hud.LookAtInfo.Describe()}'");
+                break;
+            }
+            case "tooltip":
+                Reply($"{args[1]}: '{Features.Hud.ItemTooltips.Details(ItemManager.GetItemByName(args[1]))}'");
+                break;
+            case "fuelengines":
+                foreach (var motor in RaftVelocityManager.Motors.Where(m => m != null))
+                    motor.FuelTank.ModifyTank(null, float.Parse(args.Length > 1 ? args[1] : "10"));
+                Reply(RaftState());
+                break;
+            case "tp":
+            {
+                // tp <dx> <dz>: moves the local player by an offset (world axes)
+                var player = Game.LocalPlayer;
+                player.transform.position += new Vector3(float.Parse(args[1]), 0f, float.Parse(args[2]));
+                Reply($"player at {player.transform.position}");
+                break;
+            }
             case "clearinv":
                 Game.LocalPlayer.Inventory.Clear();
                 Reply("inventory cleared");
@@ -325,6 +397,15 @@ internal static class DevRig
                 Reply("unknown command " + args[0]);
                 break;
         }
+    }
+
+    private static string RaftState()
+    {
+        var engines = RaftVelocityManager.Motors.Where(m => m != null).ToList();
+        var anchors = UnityEngine.Object.FindObjectsOfType<Anchor_Stationary>().Where(a => a.hasBeenPlaced).ToList();
+        return $"engines on={engines.Count(m => m.engineSwitchOn)}/{engines.Count} reversed={engines.Count(m => m.rotatesForward == false)} " +
+               $"sails open={Sail.AllSails.Count(x => x != null && x.open)}/{Sail.AllSails.Count} " +
+               $"anchors down={anchors.Count(a => a.AtBottom)}/{anchors.Count} dropping={anchors.Count(a => a.DroppingAnchor)} raft anchored={ComponentManager<Raft>.Value.IsAnchored}";
     }
 
     private static bool IsTestWorld() => SaveAndLoad.CurrentGameFileName?.StartsWith(TestPrefix) == true;
