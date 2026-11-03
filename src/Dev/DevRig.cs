@@ -71,20 +71,20 @@ internal static class DevRig
                 break;
             case "new":
             {
-                // new <name> [mode]: creates and hosts a single-player test world named QoL-<name>.
+                // new <name> [mode] [mp]: creates and hosts a test world named QoL-<name> (open to Steam friends with mp).
                 string name = TestPrefix + (args.Length > 1 ? args[1] : "Test");
-                var mode = args.Length > 2 ? (GameMode)Enum.Parse(typeof(GameMode), args[2], true) : GameMode.Normal;
+                var mode = args.Length > 2 && args[2] != "mp" ? (GameMode)Enum.Parse(typeof(GameMode), args[2], true) : GameMode.Normal;
                 GameModeValueManager.SelectCurrentGameMode(mode);
                 GameManager.IsInNewGame = true;
                 GameManager.FriendlyFire = false;
                 SaveAndLoad.CurrentGameFileName = name;
-                network.HostGame(RequestJoinAuthSetting.ALLOW_NONE, "");
-                Reply($"creating '{name}' ({mode})");
+                network.HostGame(args.Contains("mp") ? RequestJoinAuthSetting.ALLOW_FRIENDS : RequestJoinAuthSetting.ALLOW_NONE, "");
+                Reply($"creating '{name}' ({mode}){(args.Contains("mp") ? " for friends" : "")}");
                 break;
             }
             case "load":
             {
-                // load <name>: hosts the latest save of the test world QoL-<name>.
+                // load <name> [mp]: hosts the latest save of the test world QoL-<name> (open to Steam friends with mp).
                 string name = TestPrefix + (args.Length > 1 ? args[1] : "Test");
                 var dir = new DirectoryInfo(Path.Combine(SaveAndLoad.WorldPath, name));
                 var game = dir.Exists ? SaveAndLoad.GetLatestRGDGameFromBackupFolders(dir, out _) : null;
@@ -98,8 +98,8 @@ internal static class DevRig
                 GameModeValueManager.SelectCurrentGameMode(game.mode);
                 GameManager.IsInNewGame = false;
                 GameManager.FriendlyFire = false;
-                network.HostGame(RequestJoinAuthSetting.ALLOW_NONE, "");
-                Reply($"loading '{name}' ({game.mode})");
+                network.HostGame(args.Contains("mp") ? RequestJoinAuthSetting.ALLOW_FRIENDS : RequestJoinAuthSetting.ALLOW_NONE, "");
+                Reply($"loading '{name}' ({game.mode}){(args.Contains("mp") ? " for friends" : "")}");
                 break;
             }
             case "save":
@@ -520,6 +520,12 @@ internal static class DevRig
                 ComponentManager<CanvasHelper>.Value.SetUIState(args.Length < 2 || args[1] == "on");
                 Reply($"HUD visible={Game.HudVisible}");
                 break;
+            case "players":
+            {
+                var players = UnityEngine.Object.FindObjectsOfType<Network_Player>();
+                Reply($"players: {string.Join(", ", players.Select(p => $"{p.name} local={p.IsLocalPlayer}"))}");
+                break;
+            }
             case "status":
                 Reply($"InWorld={Game.InWorld} host={Game.IsHost} menu={CanvasHelper.ActiveMenu} hotkeys={Game.CanUseHotkeys} hud={Game.HudVisible} " +
                       $"preset={Presets.Active.Value} world='{SaveAndLoad.CurrentGameFileName}'");
