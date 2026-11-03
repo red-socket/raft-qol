@@ -22,6 +22,7 @@ internal static class DevRig
     private static float resumeAt;
     private static float nextPoll;
     private static Storage_Small lastChest;
+    private static Block lastBlock;
 
     internal static void Update()
     {
@@ -210,18 +211,48 @@ internal static class DevRig
                 break;
             }
             case "chest":
+            case "place":
             {
-                // chest [dx dz] [item]: host only; places a storage (default small chest) next to the player
+                // chest [dx dz] | place <item> [dx dz]: host only; creates a block next to the player as the local
+                // player's own build (the same calls as the host's own placement, so the build cost is drained).
                 RequireTestWorld();
-                var item = ItemManager.GetItemByName(args.Length > 3 ? args[3] : "Placeable_Storage_Small");
+                bool chest = args[0] == "chest";
+                var item = ItemManager.GetItemByName(chest ? "Placeable_Storage_Small" : args[1]);
+                int at = chest ? 1 : 2;
                 var pivot = SingletonGeneric<GameManager>.Singleton.lockedPivot;
                 var local = pivot.InverseTransformPoint(Game.LocalPlayer.transform.position);
-                var offset = args.Length > 2 ? new Vector3(float.Parse(args[1]), 0f, float.Parse(args[2])) : new Vector3(1.5f, 0f, 0f);
-                var block = Game.LocalPlayer.BlockCreator.CreateBlockCheat(item, local + offset, Vector3.zero, DPS.Floor, -1);
-                lastChest = block as Storage_Small;
-                Reply($"placed {item.UniqueName} at {block.transform.position} storage={lastChest != null} total={StorageManager.allStorages.Count}");
+                var offset = args.Length > at + 1 ? new Vector3(float.Parse(args[at]), 0f, float.Parse(args[at + 1])) : new Vector3(1.5f, 0f, 0f);
+                // The host's own placement (BlockCreator.cs:412-414), without the build-cursor checks.
+                var creator = Game.LocalPlayer.BlockCreator;
+                var block = creator.CreateBlock(item, local + offset, Vector3.zero, chest ? DPS.Floor : DPS.Default, -1, replicating: false,
+                    SaveAndLoad.GetUniqueObjectIndex(), SaveAndLoad.GetUniqueObjectIndex(), NetworkUpdateManager.GetUniqueBehaviourIndex());
+                Game.LocalPlayer.Network.RPC(new Message_BlockCreator_PlaceBlock(Messages.BlockCreator_PlaceBlock, creator, item.UniqueIndex, block.ObjectIndex,
+                    block.networkedBehaviour != null ? block.networkedBehaviour.ObjectIndex : 0u, block.networkedBehaviour != null ? block.networkedBehaviour.BehaviourIndex : 0u,
+                    block.transform.localPosition, block.transform.localEulerAngles, -1, chest ? DPS.Floor : DPS.Default),
+                    Target.Other, Steamworks.EP2PSend.k_EP2PSendReliable, NetworkChannel.Channel_Game);
+                lastBlock = block;
+                if (chest) lastChest = block as Storage_Small;
+                Reply($"placed {item.UniqueName} at {block.transform.position} storages={StorageManager.allStorages.Count}");
                 break;
             }
+            case "canbuild":
+            {
+                var item = ItemManager.GetItemByName(args[1]);
+                Reply($"can build {args[1]}: {Game.LocalPlayer.BlockCreator.HasEnoughResourcesToBuild(item.settings_recipe.NewCost)}");
+                break;
+            }
+            case "reinforce":
+            {
+                var hammer = Game.LocalPlayer.GetComponentInChildren<Hammer>(true);
+                // Hammer.Start assigns playerNetwork only once the hammer has been held.
+                if (hammer.playerNetwork == null) hammer.playerNetwork = Game.LocalPlayer;
+                Reply($"reinforce {lastBlock?.name}: {hammer.ReinforceBlock(lastBlock)}");
+                break;
+            }
+            case "clearinv":
+                Game.LocalPlayer.Inventory.Clear();
+                Reply("inventory cleared");
+                break;
             case "chestfill":
                 // chestfill <item> <n>: into the last placed chest (host copy, then pushed like a close)
                 lastChest.GetInventoryReference().AddItem(args[1], int.Parse(args[2]));
