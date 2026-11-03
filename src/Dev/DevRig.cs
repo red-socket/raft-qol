@@ -284,6 +284,60 @@ internal static class DevRig
                 Reply("player on the raft");
                 break;
             }
+            case "aim":
+            {
+                // aim last|<GameMode type name> [dy] [index]: turns the player to look at the last placed block or at
+                // the index-th object of a type (MouseLook targets are set too, so the view stays put).
+                Component target = args[1] == "last" ? lastBlock
+                    : UnityEngine.Object.FindObjectsOfType(typeof(Player).Assembly.GetType(args[1]))
+                        .OfType<Component>().OrderBy(c => (c.transform.position - Game.LocalPlayer.transform.position).sqrMagnitude)
+                        .ElementAtOrDefault(args.Length > 3 ? int.Parse(args[3]) : 0);
+                if (target == null) { Reply("aim: nothing to aim at"); break; }
+                Aim(target.transform.position + Vector3.up * (args.Length > 2 ? float.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture) : 0.5f));
+                Reply($"aiming at {target.name}");
+                break;
+            }
+            case "aimdir":
+            {
+                // aimdir <yaw> <pitch>: absolute view direction in degrees (pitch up is negative)
+                var cam = Camera.main.transform;
+                var dir = Quaternion.Euler(float.Parse(args[2]), float.Parse(args[1]), 0f) * Vector3.forward;
+                Aim(cam.position + dir * 10f);
+                Reply($"aiming {args[1]} {args[2]}");
+                break;
+            }
+            case "aimhome":
+                Aim(FirstFoundation().transform.position + Vector3.up * 0.5f);
+                Reply("aiming at the raft");
+                break;
+            case "cook":
+            {
+                // cook <item> [n]: puts raw food into the last placed (or nearest) cooking stand and adds fuel
+                var stand = (lastBlock != null ? lastBlock.GetComponent<Block_CookingStand>() : null) ?? UnityEngine.Object.FindObjectOfType<Block_CookingStand>();
+                var item = ItemManager.GetItemByName(args[1]);
+                int n = args.Length > 2 ? int.Parse(args[2]) : 1;
+                for (int i = 0; i < n; i++)
+                {
+                    var slots = stand.GetCookingSlotsForItem(item);
+                    if (slots == null || slots.Length == 0) break;
+                    slots[0].StartCooking(item, slots);
+                }
+                stand.fuel.AddFuel(3);
+                Reply($"cooking {n} {args[1]} on {stand.name}");
+                break;
+            }
+            case "desc":
+                Game.LocalPlayer.Inventory.SetItemDescription(ItemManager.GetItemByName(args[1]));
+                Reply($"description of {args[1]}");
+                break;
+            case "select":
+            {
+                var inventory = Game.LocalPlayer.Inventory;
+                inventory.hotbar.SetSelectedSlotIndex(int.Parse(args[1]));
+                inventory.hotbar.ReselectCurrentSlot();
+                Reply($"selected hotbar slot {args[1]}");
+                break;
+            }
             case "canbuild":
             {
                 var item = ItemManager.GetItemByName(args[1]);
@@ -486,6 +540,24 @@ internal static class DevRig
         return $"engines on={engines.Count(m => m.engineSwitchOn)}/{engines.Count} reversed={engines.Count(m => m.rotatesForward == false)} " +
                $"sails open={Sail.AllSails.Count(x => x != null && x.open)}/{Sail.AllSails.Count} " +
                $"anchors down={anchors.Count(a => a.AtBottom)}/{anchors.Count} dropping={anchors.Count(a => a.DroppingAnchor)} raft anchored={ComponentManager<Raft>.Value.IsAnchored}";
+    }
+
+    // Points the view at a world position: body yaw (mouseLookXScript) and camera pitch (mouseLookYScript), both the
+    // current and the target rotation, so mouse look keeps it.
+    private static void Aim(Vector3 target)
+    {
+        var script = Game.LocalPlayer.PlayerScript;
+        var cam = Camera.main.transform;
+        var dir = target - cam.position;
+        var x = script.mouseLookXScript;
+        var flat = x.isChild && x.transform.parent != null ? x.transform.parent.InverseTransformDirection(dir) : dir;
+        float yaw = Mathf.Atan2(flat.x, flat.z) * Mathf.Rad2Deg;
+        x.targetRotX = yaw;
+        x.rotX = yaw;
+        var y = script.mouseLookYScript;
+        float pitch = -Mathf.Atan2(dir.y, new Vector2(dir.x, dir.z).magnitude) * Mathf.Rad2Deg;
+        y.targetRotY = Mathf.Clamp(pitch, y.minimumY, y.maximumY);
+        y.rotY = y.targetRotY;
     }
 
     private static Block FirstFoundation() =>
