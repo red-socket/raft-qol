@@ -1,6 +1,7 @@
 using BepInEx;
+using BepInEx.Configuration;
 using BepInEx.Logging;
-using HarmonyLib;
+using RaftQoL.Core;
 
 namespace RaftQoL;
 
@@ -12,17 +13,19 @@ public class Plugin : BaseUnityPlugin
     public const string Version = "0.0.1";
 
     internal static ManualLogSource Log;
+    // Outlives this component (see Awake).
+    internal static ConfigFile ModConfig;
 
-    private Harmony harmony;
-
+    // Patches are applied per feature (Core/Feature.cs). BepInEx's manager object (and this component) is
+    // destroyed when the startup scene unloads, before the main menu, so nothing here may rely on Update or
+    // OnDestroy: per-frame work runs in Core/Runtime.cs.
     private void Awake()
     {
         Log = Logger;
-        harmony = new Harmony(Guid);
-        harmony.PatchAll(typeof(Plugin).Assembly);
+        ModConfig = Config;
+        Presets.Bind(Config);
+        Feature.DiscoverAll(Config);
+        Runtime.Install(Config);
         Log.LogInfo($"{Name} {Version} loaded");
     }
-
-    // BepInEx's manager object (and this component) is destroyed when the startup scene unloads,
-    // before the main menu. Don't unpatch in OnDestroy, or every patch is gone for the session.
 }
