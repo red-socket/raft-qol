@@ -6,7 +6,7 @@ and the key-art render from keyart_scene.py (renders/keyart-raft-porch-1920x1080
   python3 -I raft-qol/art/tools/build_art.py
 
 Outputs go to raft-qol/art/{logo,icon,banner,feature-icons}/.
-  python3 -I raft-qol/art/tools/build_art.py header   # only banner/header-1300x372.png
+  python3 -I raft-qol/art/tools/build_art.py header   # only banner/header-1300x372.png (+ the 660x200 RaftModding banner)
   python3 -I raft-qol/art/tools/build_art.py features <shots dir>   # only features/*.jpg, from in-game shots
 Visual language: the game's inventory UI (item icons on ItemBG slots) and the green
 notebook tape, so it reads as a sibling of the-fourth-chapter's art without copying it.
@@ -274,6 +274,12 @@ def feature_cards(shots):
         print("built", d / f"{slug}.jpg")
 
 
+def raftmodding_banner(header_png, out):
+    """RaftModding's mod-list banner (660x200): the wide header scaled to 200 px high, centred."""
+    mg(header_png, "-filter", "Lanczos", "-resize", "x200", "-gravity", "center", "-crop", "660x200+0+0", "+repage", out)
+    return out
+
+
 def icon(out, size=256):
     """Square mod icon: splash blue, a 2x2 inventory of headline items, green QoL tape."""
     bg = TMP / "icon_bg.png"
@@ -308,7 +314,9 @@ def main():
     if sys.argv[1:] == ["header"]:
         header(ART / "renders/keyart-raft-porch-1920x1080.png", ART / "logo/raft-qol-logo-white.png",
                ART / "banner/header-1300x372.png")
-        print("built", ART / "banner/header-1300x372.png")
+        raftmodding_banner(ART / "banner/header-1300x372.png", ART / "banner/banner-660x200.png")
+        mg(ART / "icon/icon-1024.png", "-filter", "Lanczos", "-resize", "512x512", ART / "icon/icon-512.png")
+        print("built", ART / "banner/header-1300x372.png", ART / "banner/banner-660x200.png", ART / "icon/icon-512.png")
         return
     for sub in ("logo", "icon", "banner", "feature-icons"):
         (ART / sub).mkdir(parents=True, exist_ok=True)
