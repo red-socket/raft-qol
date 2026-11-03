@@ -373,6 +373,16 @@ internal static class DevRig
                 Feature.All.OfType<Features.Storage.QuickDeposit>().First().Deposit();
                 Reply("deposit run");
                 break;
+            case "alloff":
+            case "allon":
+            {
+                // alloff: every feature off (vanilla check); allon: back to the VanillaPlus preset
+                if (args[0] == "allon") Presets.Apply(Preset.VanillaPlus);
+                else foreach (var f in Feature.All) f.Enabled.Value = false;
+                Reply($"enabled: {string.Join(", ", Feature.All.Where(f => f.Active).Select(f => f.Id))}; methods patched by raft-qol: " +
+                      Harmony.GetAllPatchedMethods().Count(m => Harmony.GetPatchInfo(m).Owners.Any(o => o.StartsWith(Plugin.Guid))));
+                break;
+            }
             case "cfg":
             {
                 // cfg <section> <key, '_' for spaces> <value>
