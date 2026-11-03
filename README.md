@@ -14,7 +14,12 @@ A fan-made quality-of-life mod for [Raft](https://store.steampowered.com/app/648
 1. Extract BepInEx 5 (`win_x64`) into the Raft game folder, next to `Raft.exe`.
 2. **Linux / Steam Deck (Proton) only:** set Raft's Steam launch options to `WINEDLLOVERRIDES="winhttp=n,b" %command%`.
 3. Copy the `RaftQoL` folder into `BepInEx/plugins/`.
-4. Start the game. Settings are in `BepInEx/config/raft-qol.cfg`.
+4. Start the game. Settings are in the **QoL** tab of Raft's Settings window (main menu or pause menu). They are stored in `BepInEx/config/raft-qol.cfg`, and edits to that file apply while the game runs.
+
+## Presets
+- **Vanilla+** (default): convenience features only. Balance stays vanilla.
+- **Relaxed:** Vanilla+ plus opt-in balance changes.
+- **Custom:** set automatically as soon as you change a setting the presets control.
 
 ## Multiplayer
 Each feature runs either for you only, or on the host for everyone. Joining unmodded hosts is supported. The feature list will say which features need the host to have the mod.

@@ -71,6 +71,7 @@ internal class Runtime : MonoBehaviour
         }
 
         Ui.Hud.Update();
+        Ui.SettingsTab.Update();
     }
 
     // Edits to raft-qol.cfg made while the game runs (by hand or by another tool) apply live.
