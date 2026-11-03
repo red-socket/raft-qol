@@ -21,6 +21,7 @@ internal static class DevRig
     private static readonly Queue<string> queue = new();
     private static float resumeAt;
     private static float nextPoll;
+    private static Storage_Small lastChest;
 
     internal static void Update()
     {
@@ -196,6 +197,86 @@ internal static class DevRig
                 else if (slider != null) slider.value = float.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture);
                 else if (toggle != null) toggle.isOn = bool.Parse(args[2]);
                 Reply($"{name} set to {args[2]}");
+                break;
+            }
+            case "give":
+                // give <item> <n>: into the local player's inventory
+            {
+                // One stack at a time: AddItem puts the whole amount into one empty slot, oversizing the stack.
+                int stack = ItemManager.GetItemByName(args[1]).settings_Inventory.StackSize;
+                for (int left = int.Parse(args[2]); left > 0; left -= stack)
+                    Game.LocalPlayer.Inventory.AddItem(args[1], Mathf.Min(stack, left));
+                Reply($"gave {args[2]} {args[1]} (stack {stack})");
+                break;
+            }
+            case "chest":
+            {
+                // chest [dx dz] [item]: host only; places a storage (default small chest) next to the player
+                RequireTestWorld();
+                var item = ItemManager.GetItemByName(args.Length > 3 ? args[3] : "Placeable_Storage_Small");
+                var pivot = SingletonGeneric<GameManager>.Singleton.lockedPivot;
+                var local = pivot.InverseTransformPoint(Game.LocalPlayer.transform.position);
+                var offset = args.Length > 2 ? new Vector3(float.Parse(args[1]), 0f, float.Parse(args[2])) : new Vector3(1.5f, 0f, 0f);
+                var block = Game.LocalPlayer.BlockCreator.CreateBlockCheat(item, local + offset, Vector3.zero, DPS.Floor, -1);
+                lastChest = block as Storage_Small;
+                Reply($"placed {item.UniqueName} at {block.transform.position} storage={lastChest != null} total={StorageManager.allStorages.Count}");
+                break;
+            }
+            case "chestfill":
+                // chestfill <item> <n>: into the last placed chest (host copy, then pushed like a close)
+                lastChest.GetInventoryReference().AddItem(args[1], int.Parse(args[2]));
+                Reply($"chest has {lastChest.GetInventoryReference().GetItemCount(args[1])} {args[1]}");
+                break;
+            case "count":
+            {
+                var name = args[1];
+                int inChests = StorageManager.allStorages.Sum(s => s.GetInventoryReference().GetItemCount(name));
+                Reply($"{name}: player={Game.LocalPlayer.Inventory.GetItemCount(name)} chests={inChests}");
+                break;
+            }
+            case "recipe":
+            {
+                var menu = ComponentManager<CraftingMenu>.Value;
+                menu.SelectRecipe(ItemManager.GetItemByName(args[1]), forceSelect: true);
+                Reply($"recipe {args[1]} selected");
+                break;
+            }
+            case "craftbtn":
+                Reply($"craft button interactable={ComponentManager<CraftingMenu>.Value.selectedRecipeBox.craftButton.interactable}");
+                break;
+            case "craft":
+                ComponentManager<CraftingMenu>.Value.CraftItem();
+                Reply("crafted");
+                break;
+            case "respawn":
+            {
+                // respawn: the bed respawn a death leads to (BedManager.cs:96), with clearInventory true
+                var player = Game.LocalPlayer;
+                player.PlayerScript.StartRespawn(BedManager.FindClosestBedToPlayer(player), clearInventory: true);
+                Reply("respawned");
+                break;
+            }
+            case "inv":
+            {
+                var inventory = Game.LocalPlayer.Inventory;
+                int Items(IEnumerable<Slot> slots) => slots.Where(s => !s.IsEmpty).Sum(s => s.itemInstance.Amount);
+                Reply($"hotbar={Items(inventory.allSlots.Take(inventory.hotslotCount))} rest={Items(inventory.allSlots.Skip(inventory.hotslotCount))} " +
+                      $"hotslotCount={inventory.hotslotCount} slots={inventory.allSlots.Count} types={string.Join(",", inventory.allSlots.GroupBy(s => s.slotType).Select(g => g.Key + ":" + g.Count()))} " +
+                      $"equipment={inventory.equipSlots.Count(s => !s.IsEmpty)} mode={GameManager.GameMode}");
+                break;
+            }
+            case "deposit":
+                // The QuickDeposit hotkey action, without the key.
+                Feature.All.OfType<Features.Storage.QuickDeposit>().First().Deposit();
+                Reply("deposit run");
+                break;
+            case "cfg":
+            {
+                // cfg <section> <key, '_' for spaces> <value>
+                var definition = new BepInEx.Configuration.ConfigDefinition(args[1], args[2].Replace('_', ' '));
+                var entry = Plugin.ModConfig[definition];
+                entry.SetSerializedValue(args[3]);
+                Reply($"[{args[1]}] {definition.Key} = {entry.BoxedValue}");
                 break;
             }
             case "hud":
