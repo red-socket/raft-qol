@@ -12,3 +12,6 @@ obj/
 *.user
 *.blend
 *.blend1
+
+# Packaged releases (attached to GitHub releases, not committed)
+/releases/
