@@ -4,7 +4,7 @@
 
 A fan-made quality-of-life mod for [Raft](https://store.steampowered.com/app/648800/Raft/). It makes everyday survival less tedious and leaves the game's balance and feel alone. Every feature can be switched on or off.
 
-> **Status: 0.1.0 beta.** Tested in single-player and when hosting. Playing together with other players has not been tested yet; see [Known limitations](#known-limitations).
+> **Status: 0.1.1 beta.** Tested in single-player and when hosting. Playing together with other players has not been tested yet; see [Known limitations](#known-limitations).
 
 ## Requirements
 - Raft 1.1 (Steam). Developed against build 22312909. A game update can break the mod until it is patched.

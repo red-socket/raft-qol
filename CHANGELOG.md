@@ -1,9 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.1.1, 2026-11-03
 
 ### Added
 - **Raft Mod Loader:** the mod manager and update mods can check RaftModding for newer versions of Raft QoL.
+
+### Changed
+- The source now builds with C# 7.3, so the Raft Mod Loader version can ship it as `.cs` files. Features, settings and the config file are unchanged; the BepInEx version behaves the same as 0.1.0.
 
 ## 0.1.0 for Raft Mod Loader, 2026-11-03
 

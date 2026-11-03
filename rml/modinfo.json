@@ -2,7 +2,7 @@
   "name": "Raft QoL",
   "author": "red-socket",
   "description": "Quality-of-life suite: craft and build from nearby chests, quick deposit, bulk craft, hold to fill, raft controls, look-at info, compass and more. Every feature can be switched off; balance stays vanilla unless you opt in.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "GPL-3.0",
   "slug": "raft-qol",
   "updateUrl": "https://www.raftmodding.com/api/v1/mods/raft-qol/version.txt",

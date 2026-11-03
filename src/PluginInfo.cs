@@ -8,7 +8,7 @@ namespace RaftQoL
     {
         public const string Guid = "raft-qol";
         public const string Name = "Raft QoL";
-        public const string Version = "0.1.0";
+        public const string Version = "0.1.1";
 
         internal static ManualLogSource Log;
         // Outlives the loader's entry object (see Plugin.cs).
