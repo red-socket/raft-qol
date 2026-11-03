@@ -1,20 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
     Raft QoL for RaftModLoader (RML). Same source as the BepInEx plugin (../src), with small stand-ins for the
-    BepInEx config and logging types (Shims/) and RML's own Harmony. `dotnet build rml -c Release` produces
-    ../releases/RaftQoL-<version>.rmod: RaftQoLMod.cs (compiled by RML), RaftQoL.dll, modinfo.json, icon, banner.
+    BepInEx config and logging types (Shims/) and RML's own Harmony. RML compiles a mod's .cs files itself, so the
+    .rmod carries source, not a DLL: `dotnet build rml -c Release` compiles the same files here as a check (C# 7.3,
+    RML's references) and packs them with modinfo.json, icon and banner into ../releases/RaftQoL-<version>.rmod.
     A Debug build adds the dev rig and writes bin/Debug/RaftQoL-<version>-debug.rmod, for testing only.
   -->
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>7.3</LangVersion>
     <AssemblyName>RaftQoL</AssemblyName>
     <RootNamespace>RaftQoL</RootNamespace>
     <Nullable>disable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <DefineConstants>$(DefineConstants);RML</DefineConstants>
     <DebugType>none</DebugType>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <RaftGame Condition="'$(RaftGame)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../reference/game'))</RaftGame>
@@ -22,14 +22,19 @@
     <!-- RML ships the original Harmony 2 (not HarmonyX); compile against the copy the RML launcher installs. -->
     <RmlBinaries Condition="'$(RmlBinaries)' == ''">$(HOME)/.local/share/Steam/steamapps/compatdata/648800/pfx/drive_c/users/steamuser/AppData/Roaming/RaftModLoader/binaries</RmlBinaries>
     <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</RepoRoot>
+    <DefineConstants Condition="'$(Configuration)' == 'Debug'">$(DefineConstants);RML</DefineConstants>
     <ModVersion>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(RepoRoot)/src/PluginInfo.cs')), 'Version = "([^"]+)"').Groups[1].Value)</ModVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="../src/**/*.cs" Exclude="../src/Plugin.cs;../src/Dev/**;../src/Features/Dev/**;../src/obj/**;../src/bin/**" />
-    <Compile Include="Plugin.Rml.cs;Shims/Configuration.cs;Shims/Logging.cs" />
-    <!-- Debug: the dev rig, for driving a test install from outside. Never shipped. -->
-    <Compile Include="../src/Dev/**/*.cs;../src/Features/Dev/**/*.cs;Shims/Paths.cs" Condition="'$(Configuration)' == 'Debug'" />
+    <!-- The files the .rmod carries; RML compiles them. -->
+    <ShipSource Include="../src/**/*.cs" Exclude="../src/Plugin.cs;../src/Dev/**;../src/Features/Dev/**;../src/obj/**;../src/bin/**" Dest="src/%(RecursiveDir)%(Filename)%(Extension)" />
+    <ShipSource Include="RaftQoLMod.cs;Plugin.Rml.cs;Shims/Configuration.cs;Shims/Logging.cs" Dest="rml/%(Identity)" />
+    <!-- Debug: the dev rig, for driving a test install from outside. Never in a release package. -->
+    <ShipSource Include="../src/Dev/**/*.cs" Dest="src/Dev/%(RecursiveDir)%(Filename)%(Extension)" Condition="'$(Configuration)' == 'Debug'" />
+    <ShipSource Include="../src/Features/Dev/**/*.cs" Dest="src/Features/Dev/%(RecursiveDir)%(Filename)%(Extension)" Condition="'$(Configuration)' == 'Debug'" />
+    <ShipSource Include="Shims/Paths.cs" Dest="rml/Shims/Paths.cs" Condition="'$(Configuration)' == 'Debug'" />
+    <Compile Include="@(ShipSource)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,6 +44,7 @@
 
   <ItemGroup>
     <Reference Include="$(RmlBinaries)/0Harmony.dll" Private="false" />
+    <Reference Include="$(RmlBinaries)/HMLCoreLibrary.dll" Private="false" />
   </ItemGroup>
 
   <!-- Game assemblies -->
@@ -71,7 +77,10 @@
     </PropertyGroup>
     <Error Condition="'$(ModInfoVersion)' != '$(ModVersion)'" Text="modinfo.json version $(ModInfoVersion) differs from Plugin.Version $(ModVersion)." />
     <RemoveDir Directories="$(RmodStage)" />
-    <Copy SourceFiles="$(TargetPath);modinfo.json;RaftQoLMod.cs" DestinationFolder="$(RmodStage)" />
+    <Copy SourceFiles="modinfo.json" DestinationFolder="$(RmodStage)" />
+    <Copy SourceFiles="@(ShipSource)" DestinationFiles="@(ShipSource->'$(RmodStage)%(Dest)')" Condition="'$(Configuration)' != 'Debug'" />
+    <!-- RML compiles without our symbols; the debug package defines them in each file. -->
+    <WriteLinesToFile File="$(RmodStage)%(ShipSource.Dest)" Lines="#define DEBUG;#define RML;$([MSBuild]::Escape($([System.IO.File]::ReadAllText('%(ShipSource.FullPath)'))))" Overwrite="true" Condition="'$(Configuration)' == 'Debug'" />
     <Copy SourceFiles="$(RepoRoot)/art/icon/icon-512.png" DestinationFiles="$(RmodStage)icon.png" />
     <Copy SourceFiles="$(RepoRoot)/art/banner/banner-660x200.png" DestinationFiles="$(RmodStage)banner.png" />
     <MakeDir Directories="$(RepoRoot)/releases" />

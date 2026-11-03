@@ -74,7 +74,7 @@ dotnet build src -p:RaftGame="/path/to/steamapps/common/Raft"
 
 The build references the game's own assemblies and copies `RaftQoL.dll` into `<Raft>/BepInEx/plugins/RaftQoL/`.
 
-The RML package is built from the same source. It compiles against RML's own Harmony, so RML must have been run once on the machine (or pass its `binaries` folder with `-p:RmlBinaries=...`):
+The RML package is built from the same source. RML compiles a mod's `.cs` files itself when it loads it, with C# 7.3, so the source sticks to C# 7.3 and the `.rmod` contains the source files rather than a DLL. The build compiles those files against RML's own Harmony first, as a check, so RML must have been run once on the machine (or pass its `binaries` folder with `-p:RmlBinaries=...`):
 
 ```bash
 dotnet build rml -c Release -p:RaftGame="/path/to/steamapps/common/Raft"

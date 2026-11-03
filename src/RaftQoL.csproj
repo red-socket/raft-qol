@@ -6,7 +6,8 @@
   -->
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <LangVersion>latest</LangVersion>
+    <!-- C# 7.3: the Raft Mod Loader build ships this source and RML compiles it with Roslyn 2.10, which stops at 7.3. -->
+    <LangVersion>7.3</LangVersion>
     <AssemblyName>RaftQoL</AssemblyName>
     <RootNamespace>RaftQoL</RootNamespace>
     <Nullable>disable</Nullable>

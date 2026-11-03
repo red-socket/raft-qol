@@ -3,88 +3,89 @@ using HarmonyLib;
 using RaftQoL.Core;
 using UnityEngine;
 
-namespace RaftQoL.Features.Crafting;
-
-// CRF-1: Shift-click Craft makes several at once, Ctrl-click makes as many as the resources allow.
-// Each extra craft is a normal CraftItem call, gated by the same cost check as the Craft button (so it also counts
-// nearby chests when CraftFromChests is on).
-public sealed class BulkCraft : Feature
+namespace RaftQoL.Features.Crafting
 {
-    public override string Id => "BulkCraft";
-    public override string Module => "Crafting";
-    public override string Name => "Bulk craft";
-    public override string Description => "Shift-click Craft to make several at once; Ctrl-click to make as many as you can.";
-    public override bool InVanillaPlus => true;
-
-    private static ConfigEntry<int> shiftCount;
-    private static ConfigEntry<int> maxCount;
-    private static bool crafting;
-
-    protected override void BindSettings()
+    // CRF-1: Shift-click Craft makes several at once, Ctrl-click makes as many as the resources allow.
+    // Each extra craft is a normal CraftItem call, gated by the same cost check as the Craft button (so it also counts
+    // nearby chests when CraftFromChests is on).
+    public sealed class BulkCraft : Feature
     {
-        shiftCount = Bind("Shift-click amount", 5, "How many crafts a Shift-click makes.", new AcceptableValueRange<int>(2, 20));
-        maxCount = Bind("Ctrl-click limit", 50, "Most crafts a Ctrl-click makes.", new AcceptableValueRange<int>(2, 200));
-    }
+        public override string Id => "BulkCraft";
+        public override string Module => "Crafting";
+        public override string Name => "Bulk craft";
+        public override string Description => "Shift-click Craft to make several at once; Ctrl-click to make as many as you can.";
+        public override bool InVanillaPlus => true;
 
-    internal static int Extra()
-    {
-        if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) return maxCount.Value - 1;
-        if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) return shiftCount.Value - 1;
-        return 0;
-    }
+        private static ConfigEntry<int> shiftCount;
+        private static ConfigEntry<int> maxCount;
+        private static bool crafting;
 
-    internal static int Repeat(CraftingMenu menu, int extra)
-    {
-        int made = 0;
-        crafting = true;
-        try
+        protected override void BindSettings()
         {
-            var box = menu.selectedRecipeBox;
-            for (; made < extra; made++)
+            shiftCount = Bind("Shift-click amount", 5, "How many crafts a Shift-click makes.", new AcceptableValueRange<int>(2, 20));
+            maxCount = Bind("Ctrl-click limit", 50, "Most crafts a Ctrl-click makes.", new AcceptableValueRange<int>(2, 200));
+        }
+
+        internal static int Extra()
+        {
+            if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) return maxCount.Value - 1;
+            if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) return shiftCount.Value - 1;
+            return 0;
+        }
+
+        internal static int Repeat(CraftingMenu menu, int extra)
+        {
+            int made = 0;
+            crafting = true;
+            try
             {
-                var item = box.ItemToCraft;
-                if (item == null) break;
-                box.costCollection.ShowCost(item.settings_recipe.NewCost);
-                if (!box.costCollection.MeetsRequirements()) break;
-                menu.CraftItem();
+                var box = menu.selectedRecipeBox;
+                for (; made < extra; made++)
+                {
+                    var item = box.ItemToCraft;
+                    if (item == null) break;
+                    box.costCollection.ShowCost(item.settings_recipe.NewCost);
+                    if (!box.costCollection.MeetsRequirements()) break;
+                    menu.CraftItem();
+                }
+            }
+            finally
+            {
+                crafting = false;
+            }
+            return made;
+        }
+
+        [HarmonyPatch(typeof(CraftingMenu), nameof(CraftingMenu.CraftItem))]
+        private static class Repeated
+        {
+            private static void Postfix(CraftingMenu __instance)
+            {
+                if (crafting) return;
+                int extra = Extra();
+                if (extra > 0) Repeat(__instance, extra);
             }
         }
-        finally
-        {
-            crafting = false;
-        }
-        return made;
-    }
 
-    [HarmonyPatch(typeof(CraftingMenu), nameof(CraftingMenu.CraftItem))]
-    private static class Repeated
-    {
-        private static void Postfix(CraftingMenu __instance)
+        // Ctrl is also Raft's default crouch key, and movement keeps running while the inventory is open, so a
+        // Ctrl-click would crouch the player. While the inventory (crafting) menu is open, the Crouch binding reads as
+        // released.
+        [HarmonyPatch(typeof(CustomInputConfig), nameof(CustomInputConfig.IsPressed), typeof(UnityEngine.InputSystem.InputAction), typeof(string))]
+        private static class NoCrouchHeld
         {
-            if (crafting) return;
-            int extra = Extra();
-            if (extra > 0) Repeat(__instance, extra);
+            private static void Postfix(string key, ref bool __result)
+            {
+                if (__result && key == "Crouch" && CanvasHelper.ActiveMenu == MenuType.Inventory) __result = false;
+            }
         }
-    }
 
-    // Ctrl is also Raft's default crouch key, and movement keeps running while the inventory is open, so a
-    // Ctrl-click would crouch the player. While the inventory (crafting) menu is open, the Crouch binding reads as
-    // released.
-    [HarmonyPatch(typeof(CustomInputConfig), nameof(CustomInputConfig.IsPressed), typeof(UnityEngine.InputSystem.InputAction), typeof(string))]
-    private static class NoCrouchHeld
-    {
-        private static void Postfix(string key, ref bool __result)
+        [HarmonyPatch(typeof(CustomInputConfig), nameof(CustomInputConfig.WasPressedThisFrame), typeof(UnityEngine.InputSystem.InputAction), typeof(string))]
+        private static class NoCrouchPressed
         {
-            if (__result && key == "Crouch" && CanvasHelper.ActiveMenu == MenuType.Inventory) __result = false;
-        }
-    }
-
-    [HarmonyPatch(typeof(CustomInputConfig), nameof(CustomInputConfig.WasPressedThisFrame), typeof(UnityEngine.InputSystem.InputAction), typeof(string))]
-    private static class NoCrouchPressed
-    {
-        private static void Postfix(string key, ref bool __result)
-        {
-            if (__result && key == "Crouch" && CanvasHelper.ActiveMenu == MenuType.Inventory) __result = false;
+            private static void Postfix(string key, ref bool __result)
+            {
+                if (__result && key == "Crouch" && CanvasHelper.ActiveMenu == MenuType.Inventory) __result = false;
+            }
         }
     }
 }
