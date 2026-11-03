@@ -1,0 +1,81 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Raft QoL for RaftModLoader (RML). Same source as the BepInEx plugin (../src), with small stand-ins for the
+    BepInEx config and logging types (Shims/) and RML's own Harmony. `dotnet build rml -c Release` produces
+    ../releases/RaftQoL-<version>.rmod: RaftQoLMod.cs (compiled by RML), RaftQoL.dll, modinfo.json, icon, banner.
+    A Debug build adds the dev rig and writes bin/Debug/RaftQoL-<version>-debug.rmod, for testing only.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>RaftQoL</AssemblyName>
+    <RootNamespace>RaftQoL</RootNamespace>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <DefineConstants>$(DefineConstants);RML</DefineConstants>
+    <DebugType>none</DebugType>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RaftGame Condition="'$(RaftGame)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../reference/game'))</RaftGame>
+    <RaftManaged>$(RaftGame)/Raft_Data/Managed</RaftManaged>
+    <!-- RML ships the original Harmony 2 (not HarmonyX); compile against the copy the RML launcher installs. -->
+    <RmlBinaries Condition="'$(RmlBinaries)' == ''">$(HOME)/.local/share/Steam/steamapps/compatdata/648800/pfx/drive_c/users/steamuser/AppData/Roaming/RaftModLoader/binaries</RmlBinaries>
+    <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..'))</RepoRoot>
+    <ModVersion>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(RepoRoot)/src/PluginInfo.cs')), 'Version = "([^"]+)"').Groups[1].Value)</ModVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../src/**/*.cs" Exclude="../src/Plugin.cs;../src/Dev/**;../src/Features/Dev/**;../src/obj/**;../src/bin/**" />
+    <Compile Include="Plugin.Rml.cs;Shims/Configuration.cs;Shims/Logging.cs" />
+    <!-- Debug: the dev rig, for driving a test install from outside. Never shipped. -->
+    <Compile Include="../src/Dev/**/*.cs;../src/Features/Dev/**/*.cs;Shims/Paths.cs" Condition="'$(Configuration)' == 'Debug'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="$(RmlBinaries)/0Harmony.dll" Private="false" />
+  </ItemGroup>
+
+  <!-- Game assemblies -->
+  <ItemGroup>
+    <Reference Include="$(RaftManaged)/Assembly-CSharp.dll" Private="false" Publicize="true" />
+    <Reference Include="$(RaftManaged)/UnityEngine.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/UnityEngine.*Module.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/Unity.TextMeshPro.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/Unity.InputSystem.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/Unity.Netcode.Runtime.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/Unity.Collections.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/com.rlabrecque.steamworks.net.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/Newtonsoft.Json.dll" Private="false" />
+    <Reference Include="$(RaftManaged)/FMODUnity.dll" Private="false" />
+  </ItemGroup>
+
+  <Target Name="CheckRml" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(RmlBinaries)/0Harmony.dll')" Text="RML's 0Harmony.dll not found in $(RmlBinaries). Run the RML launcher once, or pass -p:RmlBinaries=/path/to/RaftModLoader/binaries." />
+  </Target>
+
+  <Target Name="PackRmod" AfterTargets="Build">
+    <PropertyGroup>
+      <ModInfoText>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)modinfo.json'))</ModInfoText>
+      <ModInfoVersion>$([System.Text.RegularExpressions.Regex]::Match($(ModInfoText), '"version": "([^"]+)"').Groups[1].Value)</ModInfoVersion>
+      <RmodStage>$(IntermediateOutputPath)rmod/</RmodStage>
+      <RmodPath>$(RepoRoot)/releases/RaftQoL-$(ModVersion).rmod</RmodPath>
+      <!-- Debug packages (with the dev rig) stay out of releases/. -->
+      <RmodPath Condition="'$(Configuration)' == 'Debug'">$(TargetDir)RaftQoL-$(ModVersion)-debug.rmod</RmodPath>
+    </PropertyGroup>
+    <Error Condition="'$(ModInfoVersion)' != '$(ModVersion)'" Text="modinfo.json version $(ModInfoVersion) differs from Plugin.Version $(ModVersion)." />
+    <RemoveDir Directories="$(RmodStage)" />
+    <Copy SourceFiles="$(TargetPath);modinfo.json;RaftQoLMod.cs" DestinationFolder="$(RmodStage)" />
+    <Copy SourceFiles="$(RepoRoot)/art/icon/icon-512.png" DestinationFiles="$(RmodStage)icon.png" />
+    <Copy SourceFiles="$(RepoRoot)/art/banner/banner-660x200.png" DestinationFiles="$(RmodStage)banner.png" />
+    <MakeDir Directories="$(RepoRoot)/releases" />
+    <ZipDirectory SourceDirectory="$(RmodStage)" DestinationFile="$(RmodPath)" Overwrite="true" />
+    <Message Importance="high" Text="RaftQoL (RML) -> $(RmodPath)" />
+  </Target>
+</Project>

@@ -20,6 +20,11 @@ internal static class SettingsTab
     private const int TabIndex = 4;
 
     private static Settings builtFor;
+    // What Build added to the vanilla window, so Remove can take it out again.
+    private static GameObject addedPanel, addedButton;
+    private static OptionsMenuBox addedBox;
+    private static EventTrigger[] addedTriggers = Array.Empty<EventTrigger>();
+    private static bool tabStripControlledWidth;
 
     // Called from Runtime every frame; builds once per Settings instance (it is a DontDestroyOnLoad singleton).
     internal static void Update()
@@ -35,6 +40,37 @@ internal static class SettingsTab
         {
             Plugin.Log.LogError($"Building the QoL settings tab failed; use raft-qol.cfg instead: {e}");
         }
+    }
+
+    // For a loader that can unload the mod: restores the vanilla Settings window.
+    internal static void Remove()
+    {
+        var settings = builtFor;
+        builtFor = null;
+        if (settings == null || addedPanel == null) return;
+        try
+        {
+            if (addedButton != null)
+            {
+                var tabButton = addedButton.GetComponent<TabButton>();
+                var group = settings.tabGroup;
+                // The window reopens on the last selected tab; with ours gone it would open blank.
+                if (group.SelectedTabButton == tabButton) group.SelectTab(0);
+                if (group.tabButtons != null) group.tabButtons = group.tabButtons.Where(b => b != tabButton).ToArray();
+                addedButton.transform.parent.GetComponent<HorizontalLayoutGroup>().childControlWidth = tabStripControlledWidth;
+                Object.Destroy(addedButton);
+            }
+            settings.optionMenuboxes = settings.optionMenuboxes.Where(b => b != addedBox).ToArray();
+            settings.dropdownTriggers = settings.dropdownTriggers.Where(t => !addedTriggers.Contains(t)).ToArray();
+            Object.Destroy(addedPanel);
+        }
+        catch (Exception e)
+        {
+            Plugin.Log.LogError($"Removing the QoL settings tab failed: {e}");
+        }
+        addedPanel = addedButton = null;
+        addedBox = null;
+        addedTriggers = Array.Empty<EventTrigger>();
     }
 
     private sealed class Builder
@@ -97,6 +133,9 @@ internal static class SettingsTab
             AddTabButton(panel);
             settings.dropdownTriggers = settings.dropdownTriggers.Concat(triggers).ToArray();
             settings.optionMenuboxes = settings.optionMenuboxes.Append(box).ToArray();
+            addedPanel = panel;
+            addedBox = box;
+            addedTriggers = triggers.ToArray();
             Plugin.Log.LogInfo($"QoL settings tab added ({content.childCount} rows)");
         }
 
@@ -272,8 +311,11 @@ internal static class SettingsTab
             tabButton.tabConsole = null;
             SetLabel(tabButton.text, "QoL");
             tabButton.OnPointerExit(forceExit: true);
+            addedButton = button;
             // Five fixed-width buttons overflow the strip; let the layout share the width instead (~108 px each).
-            container.GetComponent<HorizontalLayoutGroup>().childControlWidth = true;
+            var strip = container.GetComponent<HorizontalLayoutGroup>();
+            tabStripControlledWidth = strip.childControlWidth;
+            strip.childControlWidth = true;
             var group = settings.tabGroup;
             if (group.tabButtons != null && group.tabButtons.Length > 0 && !group.tabButtons.Contains(tabButton))
                 group.tabButtons = group.tabButtons.Append(tabButton).ToArray();

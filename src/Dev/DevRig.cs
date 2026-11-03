@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using BepInEx;
 using HarmonyLib;
 using RaftQoL.Core;
@@ -59,6 +60,14 @@ internal static class DevRig
         }
     }
 
+#if RML
+    internal static void RmlCall(string type, string method, string[] arg = null)
+    {
+        var t = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(type)).First(x => x != null);
+        t.GetMethod(method, BindingFlags.Public | BindingFlags.Static).Invoke(null, arg == null ? null : new object[] { arg });
+    }
+
+#endif
     private static void Reply(string text) => Plugin.Log.LogInfo("[dev] " + text);
 
     private static void Run(string[] args)
@@ -128,6 +137,25 @@ internal static class DevRig
                 Reply("screenshot " + path);
                 break;
             }
+#if RML
+            case "rml":
+            {
+                // rml closemenu | rml cycle: RML's own mod menu, and an unload + reload through RML's console commands.
+                if (args[1] == "closemenu")
+                {
+                    RmlCall("RaftModLoader.MainMenu", "CloseMenu");
+                    Reply("RML menu closed");
+                }
+                else if (args[1] == "cycle")
+                {
+                    var go = new GameObject("RaftQoL_RmlCycle");
+                    UnityEngine.Object.DontDestroyOnLoad(go);
+                    go.AddComponent<RmlCycle>();
+                    Reply("unloading through RML");
+                }
+                break;
+            }
+#endif
             case "toast":
                 Toast.Show(args.Length > 1 ? string.Join(" ", args, 1, args.Length - 1) : "Test toast");
                 Reply("toast queued");
@@ -589,6 +617,32 @@ internal static class DevRig
     private static void RequireTestWorld()
     {
         if (!IsTestWorld()) throw new InvalidOperationException($"'{SaveAndLoad.CurrentGameFileName}' is not a {TestPrefix} test world");
+    }
+}
+#endif
+
+#if RML
+// Unloads Raft QoL through RML's "mod.unload" console command, checks the Settings window from outside the mod
+// (this assembly stays loaded after an unload), then loads it again with "mod.load". The new instance's rig takes
+// over the command file.
+internal class RmlCycle : MonoBehaviour
+{
+    private System.Collections.IEnumerator Start()
+    {
+        DevRig.RmlCall("RaftModLoader.DefaultConsoleCommands", "ModUnload", new[] { Plugin.Name });
+        yield return new WaitForSecondsRealtime(3f);
+        var s = ComponentManager<Settings>.Value;
+        s.Open();
+        yield return new WaitForSecondsRealtime(1f);
+        Debug.Log($"[Raft QoL rml-cycle] after unload: tabs={s.tabGroup.tabButtons.Length} boxes={s.optionMenuboxes.Length} " +
+                  $"qolPanel={(s.optionsCanvas.transform.Find("TabContent")?.Find("RaftQoL") != null)} " +
+                  $"patched={HarmonyLib.Harmony.GetAllPatchedMethods().Count(m => HarmonyLib.Harmony.GetPatchInfo(m).Owners.Any(o => o.StartsWith(Plugin.Guid)))}");
+        ScreenCapture.CaptureScreenshot(Path.Combine(Paths.ConfigPath, "qol-shots", "rml-unloaded.png"));
+        yield return new WaitForSecondsRealtime(1f);
+        s.Close();
+        DevRig.RmlCall("RaftModLoader.DefaultConsoleCommands", "ModLoad", new[] { Plugin.Name });
+        Debug.Log("[Raft QoL rml-cycle] reload requested");
+        Destroy(gameObject);
     }
 }
 #endif

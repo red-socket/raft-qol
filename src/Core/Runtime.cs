@@ -17,19 +17,33 @@ internal class Runtime : MonoBehaviour
     private DateTime configWriteTime;
     private float nextConfigCheck;
 
-    internal static void Install(ConfigFile file)
+    // createNow: the loader starts the mod after the first scene has loaded (RML loads mods in the main menu).
+    internal static void Install(ConfigFile file, bool createNow = false)
     {
         config = file;
         SceneManager.sceneLoaded += OnSceneLoaded;
+        if (createNow) Create();
     }
 
-    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    // For a loader that can unload the mod.
+    internal static void Uninstall()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        if (instance != null) Destroy(instance.gameObject);
+        instance = null;
+    }
+
+    private static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => Create();
+
+    private static void Create()
     {
         if (instance != null) return;
         var go = new GameObject("RaftQoL");
         go.hideFlags = HideFlags.HideAndDontSave;
         DontDestroyOnLoad(go);
         instance = go.AddComponent<Runtime>();
+        // Features already ran OnWorldLoaded when they were enabled inside a world (the mod loaded mid-game).
+        instance.wasInWorld = Game.InWorld;
     }
 
     private void Start()
@@ -39,6 +53,8 @@ internal class Runtime : MonoBehaviour
 
     private void Update()
     {
+        // An uninstalled Runtime may still get one more Update before Destroy takes effect.
+        if (instance != this) return;
         WatchConfigFile();
 
         bool inWorld = Game.InWorld;

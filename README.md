@@ -8,13 +8,22 @@ A fan-made quality-of-life mod for [Raft](https://store.steampowered.com/app/648
 
 ## Requirements
 - Raft 1.1 (Steam). Developed against build 22312909. A game update can break the mod until it is patched.
-- [BepInEx 5](https://github.com/BepInEx/BepInEx/releases) (5.4.23 or later 5.x, `win_x64`).
+- One mod loader: [BepInEx 5](https://github.com/BepInEx/BepInEx/releases) (5.4.23 or later 5.x, `win_x64`), or [Raft Mod Loader](https://www.raftmodding.com/loader) (RML, 2.8). Both builds have the same features and settings.
 
 ## Installing
+
+### With BepInEx
 1. Extract BepInEx 5 (`win_x64`) into the Raft game folder, next to `Raft.exe`.
 2. **Linux / Steam Deck (Proton) only:** set Raft's Steam launch options to `WINEDLLOVERRIDES="winhttp=n,b" %command%`.
-3. Copy the `RaftQoL` folder into `BepInEx/plugins/`.
+3. Copy the `RaftQoL` folder from `RaftQoL-<version>.zip` into `BepInEx/plugins/`.
 4. Start the game. Settings are in the **QoL** tab of Raft's Settings window (main menu or pause menu). They are stored in `BepInEx/config/raft-qol.cfg`, and edits to that file apply while the game runs.
+
+### With Raft Mod Loader
+1. Put `RaftQoL-<version>.rmod` into the `mods` folder in the Raft game folder (or install it from RaftModding).
+2. Start Raft through the RML launcher, press **F9**, select **Raft QoL** and click **Load selected mods**. To load it every time, open its info panel and tick **Load this mod at startup**.
+3. Settings are in the same **QoL** tab and are stored in `mods/ModData/raft-qol/raft-qol.cfg`. The mod can be unloaded and loaded again from RML's mod manager without restarting the game.
+
+Use one loader at a time: RML's launcher removes BepInEx's `winhttp.dll` and `doorstop_config.ini` from the game folder.
 
 ## Presets
 - **Vanilla+** (default): convenience features only. Balance stays vanilla.
@@ -50,6 +59,7 @@ Every key can be changed in the QoL tab. Keys do nothing while a menu or the cha
 - **Multiplayer is untested.** The mod only sends the game's own network messages, so players without it should be able to join, but nobody has tried it yet. Features marked "Host" do nothing when you join someone else's world.
 - **Gamepad** controls and the Chinese, Japanese, Korean and Russian fonts in the QoL tab have not been tested.
 - Settings and labels are in English only.
+- **RML:** after replacing the `.rmod` while Raft is running, restart the game. Unloading and loading again keeps using the version the game started with.
 - Removing the mod leaves your worlds loadable in the unmodded game: the mod adds nothing to save files.
 
 ## Multiplayer
@@ -63,6 +73,14 @@ dotnet build src -p:RaftGame="/path/to/steamapps/common/Raft"
 ```
 
 The build references the game's own assemblies and copies `RaftQoL.dll` into `<Raft>/BepInEx/plugins/RaftQoL/`.
+
+The RML package is built from the same source. It compiles against RML's own Harmony, so RML must have been run once on the machine (or pass its `binaries` folder with `-p:RmlBinaries=...`):
+
+```bash
+dotnet build rml -c Release -p:RaftGame="/path/to/steamapps/common/Raft"
+```
+
+This writes `releases/RaftQoL-<version>.rmod`.
 
 ## License
 The source code is licensed under the [GNU General Public License v3.0](LICENSE). The images in `art/` are built from Raft's own game assets, which belong to Redbeet Interactive, so they are not covered by the GPL.

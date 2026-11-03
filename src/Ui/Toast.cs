@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace RaftQoL.Ui;
@@ -32,6 +34,22 @@ public static class Toast
         // The constructor prefixes "<amount>x "; overwrite it.
         var info = new Notification_QuestItem_Info("", 0, icon) { itemName = text };
         toast.infoQue.Enqueue(info);
+    }
+
+    // For a loader that can unload the mod: takes the cloned notifications back out of the game's manager.
+    internal static void Remove()
+    {
+        if (registeredOn == null) return;
+        var ours = registeredOn.notifications.FindAll(n => n.identifier == TextId || n.identifier == IconId);
+        // The manager also holds queued and showing toasts; it would touch the destroyed clones on its next Update.
+        registeredOn.notificationQue = new Queue<Notification>(registeredOn.notificationQue.Where(n => !ours.Contains(n)));
+        if (ours.Contains(registeredOn.currentNotification)) registeredOn.currentNotification = null;
+        foreach (var n in ours)
+        {
+            registeredOn.notifications.Remove(n);
+            Object.Destroy(n.gameObject);
+        }
+        registeredOn = null;
     }
 
     // The NotificationManager lives in MainScene, so this runs once per world load.

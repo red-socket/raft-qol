@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Raft Mod Loader (RML) version:** `RaftQoL-<version>.rmod`, with the same features, settings and QoL tab as the BepInEx version. Settings are stored in `mods/ModData/raft-qol/raft-qol.cfg`. The mod can be unloaded and loaded again from RML's mod manager while the game runs; unloading removes its patches, the QoL tab, the HUD and its notifications.
+
 ## 0.1.0 (beta), 2026-11-03
 
 First public build. Tested in single-player and when hosting, on Raft 1.1.01 (build 22312909) with BepInEx 5.4.23.6.

@@ -37,6 +37,7 @@ public static class Presets
     internal static void Bind(ConfigFile file)
     {
         config = file;
+        tracked.Clear();
         Active = file.Bind("General", "Preset", Preset.VanillaPlus,
             "VanillaPlus: convenience features only, balance stays vanilla. Relaxed: adds the balance changes. " +
             "Custom: your own choice. Picking VanillaPlus or Relaxed overwrites the feature settings it controls.");

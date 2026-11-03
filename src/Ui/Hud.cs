@@ -50,6 +50,15 @@ public static class Hud
         scaler.matchWidthOrHeight = 0.5f;
     }
 
+    // For a loader that can unload the mod.
+    internal static void Remove()
+    {
+        elements.Clear();
+        if (canvas != null) Object.Destroy(canvas.gameObject);
+        canvas = null;
+        font = null;
+    }
+
     internal static void Register(HudText element) => elements.Add(element);
     internal static void Unregister(HudText element) => elements.Remove(element);
 

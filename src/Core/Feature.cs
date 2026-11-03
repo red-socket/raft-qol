@@ -98,17 +98,14 @@ public abstract class Feature
             if (want)
             {
                 foreach (var type in PatchTypes())
-                    harmony.PatchAll(type);
+                    harmony.CreateClassProcessor(type).Patch();
                 Active = true;
                 OnEnable();
                 if (Game.InWorld) OnWorldLoaded();
             }
             else
             {
-                Active = false;
-                if (Game.InWorld) OnWorldUnloaded();
-                OnDisable();
-                harmony.UnpatchSelf();
+                Deactivate();
             }
             Plugin.Log.LogInfo($"{Id} {(Active ? "enabled" : "disabled")}, {PatchedMethodCount} methods patched");
         }
@@ -124,8 +121,44 @@ public abstract class Feature
         Plugin.Log.LogError($"{Id} failed while {during} and is turned off until restart: {e}");
         faulted = true;
         Active = false;
-        try { harmony.UnpatchSelf(); }
+        try { Unpatch(); }
         catch (Exception inner) { Plugin.Log.LogError($"{Id}: unpatch failed: {inner}"); }
+    }
+
+    // Turns every feature off and drops them, for a loader that can unload the mod (RML's mod manager).
+    internal static void ShutdownAll()
+    {
+        foreach (var feature in All)
+        {
+            try
+            {
+                if (feature.Active) feature.Deactivate();
+                else feature.Unpatch();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogError($"{feature.Id}: shutdown failed: {e}");
+            }
+        }
+        All.Clear();
+    }
+
+    private void Deactivate()
+    {
+        Active = false;
+        if (Game.InWorld) OnWorldUnloaded();
+        OnDisable();
+        Unpatch();
+    }
+
+    // HarmonyX (BepInEx) has UnpatchSelf; RML ships the original Harmony, which only has UnpatchAll(id).
+    private void Unpatch()
+    {
+#if RML
+        harmony.UnpatchAll(harmony.Id);
+#else
+        harmony.UnpatchSelf();
+#endif
     }
 
     private IEnumerable<Type> PatchTypes()
