@@ -321,6 +321,27 @@ internal static class DevRig
                 Reply($"player at {player.transform.position}");
                 break;
             }
+            case "put":
+            {
+                // put <slot index> <item> <n>: sets one player slot directly (hotbar is 0..9)
+                var inventory = Game.LocalPlayer.Inventory;
+                var slot = inventory.allSlots[int.Parse(args[1])];
+                slot.SetItem(ItemManager.GetItemByName(args[2]), int.Parse(args[3]));
+                inventory.hotbar.ReselectCurrentSlot();
+                Reply($"slot {args[1]} = {args[3]} {args[2]} (selected={inventory.hotbar.IsSelectedHotSlot(slot)})");
+                break;
+            }
+            case "take":
+                // take <item> <n>: Inventory.RemoveItem on the player (the multi-slot removal quests and vending use)
+                Game.LocalPlayer.Inventory.RemoveItem(args[1], int.Parse(args[2]));
+                Reply($"took {args[2]} {args[1]}, player has {Game.LocalPlayer.Inventory.GetItemCount(args[1])}");
+                break;
+            case "slots":
+            {
+                var inventory = Game.LocalPlayer.Inventory;
+                Reply("slots: " + string.Join(" ", inventory.allSlots.Select((x, i) => x.IsEmpty ? null : $"{i}:{x.itemInstance.UniqueName}x{x.itemInstance.Amount}").Where(x => x != null)));
+                break;
+            }
             case "clearinv":
                 Game.LocalPlayer.Inventory.Clear();
                 Reply("inventory cleared");
