@@ -47,6 +47,14 @@ public sealed class QuickDeposit : Feature
 
     internal void Deposit()
     {
+        // Deposited hotbar stacks must not be refilled from the backpack (SmartInventory).
+        Items.SmartInventory.Suppressed++;
+        try { DepositNow(); }
+        finally { Items.SmartInventory.Suppressed--; }
+    }
+
+    private void DepositNow()
+    {
         var inventory = Game.LocalPlayer.Inventory;
         // Everything after the hotbar (the first hotslotCount slots, as in Hotbar.ContainsSlot), plus the hotbar if
         // asked. Equipment is not in allSlots.
