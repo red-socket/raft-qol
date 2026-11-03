@@ -25,6 +25,9 @@ public static class Toast
             return;
         }
 
+#if DEBUG
+        Plugin.Log.LogInfo($"Toast: {text}");
+#endif
         var toast = (Notification_QuestItem)manager.ShowNotification(icon != null ? IconId : TextId);
         // The constructor prefixes "<amount>x "; overwrite it.
         var info = new Notification_QuestItem_Info("", 0, icon) { itemName = text };
