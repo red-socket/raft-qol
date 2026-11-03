@@ -19,7 +19,7 @@ A fan-made quality-of-life mod for [Raft](https://store.steampowered.com/app/648
 4. Start the game. Settings are in the **QoL** tab of Raft's Settings window (main menu or pause menu). They are stored in `BepInEx/config/raft-qol.cfg`, and edits to that file apply while the game runs.
 
 ### With Raft Mod Loader
-1. Put `RaftQoL-<version>.rmod` into the `mods` folder in the Raft game folder (or install it from RaftModding).
+1. Install it from [RaftModding](https://www.raftmodding.com/mods/raft-qol), or put `RaftQoL-<version>.rmod` into the `mods` folder in the Raft game folder.
 2. Start Raft through the RML launcher, press **F9**, select **Raft QoL** and click **Load selected mods**. To load it every time, open its info panel and tick **Load this mod at startup**.
 3. Settings are in the same **QoL** tab and are stored in `mods/ModData/raft-qol/raft-qol.cfg`. The mod can be unloaded and loaded again from RML's mod manager without restarting the game.
 
