@@ -6,6 +6,7 @@ and the key-art render from keyart_scene.py (renders/keyart-raft-porch-1920x1080
   python3 -I raft-qol/art/tools/build_art.py
 
 Outputs go to raft-qol/art/{logo,icon,banner,feature-icons}/.
+  python3 -I raft-qol/art/tools/build_art.py header   # only banner/header-1300x372.png
 Visual language: the game's inventory UI (item icons on ItemBG slots) and the green
 notebook tape, so it reads as a sibling of the-fourth-chapter's art without copying it.
 """
@@ -178,6 +179,24 @@ def banner(keyart, logo_png, out):
        tag, "-gravity", "southeast", "-geometry", "+96+56", "-composite", out)
 
 
+def header(keyart, logo_png, out, W=1300, H=372):
+    """Wide mod-page header: a horizon band of the key art (raft on the left), the logo and the five headline
+    slots on the right. No labels: at this height they would be too small to read."""
+    band = TMP / "header_band.png"
+    # Scale the key art to the header width, then keep a band around the raft and the horizon.
+    mg(keyart, "-resize", f"{W}x", "-gravity", "north", "-crop", f"{W}x{H}+0+150", "+repage", band)
+    l = TMP / "header_logo.png"
+    mg(logo_png, "-resize", "x250", l)
+    slots = [slot_icon(name, TMP / f"hd_{i}.png", highlighted=(i == 0), scale=0.42) for i, (name, _) in enumerate(HOTBAR)]
+    row = shadowed(hrow(slots, TMP / "header_row.png", 8), TMP / "header_row_s.png", "60x5+0+3")
+    lw, _ = size_of(l)
+    rw, _ = size_of(row)
+    right = 70 + (lw - rw) // 2 if lw > rw else 70
+    mg(band, l, "-gravity", "northeast", "-geometry", "+70+8", "-composite",
+       row, "-gravity", "southeast", "-geometry", f"+{right}+14", "-composite", out)
+    return out
+
+
 def icon(out, size=256):
     """Square mod icon: splash blue, a 2x2 inventory of headline items, green QoL tape."""
     bg = TMP / "icon_bg.png"
@@ -205,12 +224,19 @@ def feature_icons():
 
 
 def main():
+    import sys
+    if sys.argv[1:] == ["header"]:
+        header(ART / "renders/keyart-raft-porch-1920x1080.png", ART / "logo/raft-qol-logo-white.png",
+               ART / "banner/header-1300x372.png")
+        print("built", ART / "banner/header-1300x372.png")
+        return
     for sub in ("logo", "icon", "banner", "feature-icons"):
         (ART / sub).mkdir(parents=True, exist_ok=True)
     logo(ART / "logo/raft-qol-logo-white.png", ART / "logo/raft-qol-logo-dark.png")
     keyart = ART / "renders/keyart-raft-porch-1920x1080.png"
     if keyart.exists():
         banner(keyart, ART / "logo/raft-qol-logo-white.png", ART / "banner/banner-1920x1080.png")
+        header(keyart, ART / "logo/raft-qol-logo-white.png", ART / "banner/header-1300x372.png")
     icon(ART / "icon/icon-256.png", 256)
     icon(ART / "icon/icon-1024.png", 1024)
     feature_icons()
