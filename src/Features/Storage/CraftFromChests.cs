@@ -66,20 +66,10 @@ public sealed class CraftFromChests : Feature
         {
             if (!Applies || __instance != Game.LocalPlayer.Inventory) return true;
 
-            var remaining = costMultiple.Select(c => new CostMultiple(c.items, c.amount)).ToArray();
+            var remaining = NearbyChests.Copy(costMultiple);
             __instance.RemoveCostMultiple(remaining, manipulateCostAmount: true);
             __instance.secondInventory?.RemoveCostMultiple(remaining, manipulateCostAmount: true);
-
-            foreach (var chest in NearbyChests.Around(radius.Value))
-            {
-                if (remaining.All(c => c.amount <= 0)) break;
-                var inventory = chest.GetInventoryReference();
-                var owed = remaining.Where(c => c.amount > 0 && c.items.Any(i => i != null && inventory.GetItemCount(i.UniqueName) > 0)).ToArray();
-                if (owed.Length == 0) continue;
-                inventory.RemoveCostMultiple(owed, manipulateCostAmount: true);
-                NearbyChests.Push(chest);
-            }
-            NearbyChests.InvalidateCache();
+            NearbyChests.Drain(remaining, radius.Value);
             return false;
         }
     }

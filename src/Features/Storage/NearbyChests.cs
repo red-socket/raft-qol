@@ -65,6 +65,38 @@ internal static class NearbyChests
         return cache;
     }
 
+    // True when the inventory and the chests together cover every cost.
+    public static bool Covers(Inventory inventory, CostMultiple[] costs, float radius)
+    {
+        var chests = Around(radius);
+        foreach (var cost in costs)
+        {
+            int have = 0;
+            foreach (var item in cost.items)
+                if (item != null) have += inventory.GetItemCount(item.UniqueName) + Count(chests, item);
+            if (have < cost.amount) return false;
+        }
+        return true;
+    }
+
+    // Takes what is still owed (amounts are reduced in place) from the chests, nearest first, and pushes every chest
+    // that changed.
+    public static void Drain(CostMultiple[] remaining, float radius)
+    {
+        foreach (var chest in Around(radius))
+        {
+            if (System.Array.TrueForAll(remaining, c => c.amount <= 0)) break;
+            var inventory = chest.GetInventoryReference();
+            var owed = System.Array.FindAll(remaining, c => c.amount > 0 && System.Array.Exists(c.items, i => i != null && inventory.GetItemCount(i.UniqueName) > 0));
+            if (owed.Length == 0) continue;
+            inventory.RemoveCostMultiple(owed, manipulateCostAmount: true);
+            Push(chest);
+        }
+        InvalidateCache();
+    }
+
+    public static CostMultiple[] Copy(CostMultiple[] costs) => System.Array.ConvertAll(costs, c => new CostMultiple(c.items, c.amount));
+
     public static int Count(List<Storage_Small> chests, Item_Base item)
     {
         int total = 0;
