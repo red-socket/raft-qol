@@ -39,6 +39,7 @@ Use one loader at a time: RML's launcher removes BepInEx's `winhttp.dll` and `do
 | Craft from nearby chests | Crafting counts and uses items in closed chests within 20 m, after your inventory | Vanilla+ | | Host |
 | Build from nearby chests | Building, upgrading, repairing and reinforcing use items from nearby chests | Vanilla+ | | Host |
 | Quick deposit | Moves your items into nearby chests that already hold the same item. Tools, equipment and the hotbar stay with you | Vanilla+ | G | Host |
+| Inventory sort button | A sort button on your inventory, like the one on chests: stacks and orders the items in your inventory and backpack. The hotbar stays as it is | Vanilla+ | Click the button | Anyone |
 | Bulk craft | Shift-click Craft makes 5, Ctrl-click makes as many as you can | Vanilla+ | Shift / Ctrl + click | Anyone |
 | Hold to fill | Hold Interact on tanks, grills, smelters, purifiers and cooking pots to keep adding or collecting | Vanilla+ | Hold E | Host |
 | Return containers | Bowls, plates and glasses come back after eating and drinking | Vanilla+ | | Anyone |

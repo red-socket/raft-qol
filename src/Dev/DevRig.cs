@@ -520,6 +520,26 @@ namespace RaftQoL.Dev
                           $"equipment={inventory.equipSlots.Count(s => !s.IsEmpty)} mode={GameManager.GameMode}");
                     break;
                 }
+                case "sortinv":
+                {
+                    // sortinv [click]: the inventory sort, directly or through the button's own click event
+                    if (args.Length > 1 && args[1] == "click")
+                    {
+                        var go = GameObject.Find("RaftQoL Sort button");
+                        if (go == null) { Reply("no sort button"); break; }
+                        go.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                    }
+                    else
+                        Features.Items.SortInventory.Sort(Game.LocalPlayer.Inventory);
+                    Reply("inventory sorted");
+                    break;
+                }
+                case "openchest":
+                    // Opens the last placed chest as the host's Interact does (Storage_Small.cs:249-252).
+                    Game.LocalPlayer.Network.RPC(new Message_Storage(Messages.StorageManager_Open, Game.LocalPlayer.StorageManager, lastChest),
+                        Target.Other, Steamworks.EP2PSend.k_EP2PSendReliable, NetworkChannel.Channel_Game);
+                    Reply($"chest opened={Game.LocalPlayer.StorageManager.OpenStorage(lastChest)}");
+                    break;
                 case "deposit":
                     // The QuickDeposit hotkey action, without the key.
                     Feature.All.OfType<Features.Storage.QuickDeposit>().First().Deposit();

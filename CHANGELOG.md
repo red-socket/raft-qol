@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Inventory sort button:** the inventory gets the same sort button as chests. It stacks and orders the items in your inventory and backpack; the hotbar and equipment stay as they are. On by default (Vanilla+), mouse and keyboard only, like the chest button.
+
 ## 0.1.1, 2026-11-03
 
 ### Added
